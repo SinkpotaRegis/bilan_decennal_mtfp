@@ -341,7 +341,10 @@ const AVEC_DENOM   = !['somme','cumul_annuel','nombre','score_externe','indice']
 const ANNEES       = [2016,2017,2018,2019,2020,2021,2022,2023,2024,2025,2026];
 const UNITE        = "{{ kpi.get_resultat_unite() }}";
 const MAX_SIZE_MB  = 50;
-const DONNEES_BDD  = {{ donnees_bdd | tojson }};
+const DONNEES_BDD_RAW = {{ donnees_bdd | tojson }};
+// Normaliser les clés en entiers (JSON convertit les clés en string)
+const DONNEES_BDD = {};
+Object.keys(DONNEES_BDD_RAW).forEach(k => { DONNEES_BDD[parseInt(k)] = DONNEES_BDD_RAW[k]; });
 
 /* Stockage local des fichiers en attente d'upload par année */
 const fichiersEnAttente = {}; /* { annee: [{file, nom, type, taille}, ...] } */
@@ -392,6 +395,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     construireTableau();
     chargerHistorique();
+    // Recalculer toutes les lignes après construction du tableau
+    ANNEES.forEach(a => calculerLigne(a));
 });
 
 /* ============================================================
@@ -740,6 +745,7 @@ async function enregistrerLigne(annee) {
 
 /* ============================================================
    SOUMETTRE TOUTES LES ANNÉES
+   Exposé aussi comme window.soumettreTout pour compatibilité base.html
 ============================================================ */
 async function soumettreToutes() {
     const btn   = document.getElementById('btnSoumettreT');
@@ -803,7 +809,9 @@ async function chargerHistorique() {
         const rows = await res.json();
         if (!Array.isArray(rows) || rows.length === 0) return;
 
-        const renseignes = rows.filter(r => r.valeur !== null && r.valeur !== 0);
+        // Garder uniquement les lignes avec une vraie valeur saisie
+        // (on exclut uniquement null, pas 0 qui peut être une vraie valeur)
+        const renseignes = rows.filter(r => r.valeur !== null && r.valeur !== undefined);
         if (renseignes.length === 0) return;
 
         document.getElementById('section-historique').style.display = 'block';
@@ -846,8 +854,9 @@ function toast(msg, type = 'info') {
     el._timer = setTimeout(() => el.classList.remove('show'), 3500);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    ANNEES.forEach(a => calculerLigne(a));
-});
+// calculerLigne est déjà appelé dans le premier DOMContentLoaded après construireTableau()
+
+// Exposer soumettreToutes pour base.html (bouton global Soumettre tout)
+window.soumettreTout = soumettreToutes;
 </script>
 {% endblock %}

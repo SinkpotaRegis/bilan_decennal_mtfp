@@ -486,16 +486,15 @@
         </div>
 
         <div class="meta-chips">
-            <!-- <span class="chip">Agent connecté: <strong>{{ current_user.username }}</strong></span>
-            <span class="chip">Direction: <strong>{{ current_user.structure or 'MTFP' }}</strong></span> -->
-            <span class="chip">Total lignes: <strong id="total-lignes">0</strong></span>
+            <span class="chip">👤 <strong>{{ current_user.username }}</strong></span>
+            <span class="chip">🏢 Direction : <strong>{{ current_user.structure or 'Non définie' }}</strong></span>
+            <span class="chip">Total : <strong id="total-lignes">0</strong> soumission(s)</span>
         </div>
     </section>
 
     <div class="group-tabs" id="group-tabs">
-        <button type="button" class="group-tab active" data-group-id="1">Groupe Thématique 1</button>
-        <button type="button" class="group-tab" data-group-id="2">Groupe Thématique 2</button>
-        <button type="button" class="group-tab" data-group-id="3">Groupe Thématique 3</button>
+        <button type="button" class="group-tab active" data-group-id="0">📊 Toutes les soumissions</button>
+        <!-- Les autres onglets sont chargés dynamiquement depuis la BDD -->
     </div>
     <section class="recap-table-wrap">
         <div class="table-loader" id="table-loader" aria-hidden="true">
@@ -564,7 +563,7 @@
     const btnConsulter = document.getElementById('btn-consulter');
     const btnModifier = document.getElementById('btn-modifier');
     const btnSupprimer = document.getElementById('btn-supprimer');
-    let activeGroupId = 1;
+    let activeGroupId = 0;  // 0 = tous les groupes
 
     function statutLabel(value) {
         const map = {
@@ -621,7 +620,7 @@
         const params = new URLSearchParams();
         params.set('page', page);
         params.set('per_page', recapState.perPage);
-        params.set('groupe_id', activeGroupId);
+        params.set('groupe_id', activeGroupId);  // 0 = tous
         if (filters.code.value.trim()) params.set('code', filters.code.value.trim());
         if (filters.indicateur.value.trim()) params.set('indicateur', filters.indicateur.value.trim());
         if (filters.annee.value.trim()) params.set('annee', filters.annee.value.trim());
@@ -772,7 +771,8 @@
     function ouvrirConsultation() {
         const row = getSelectedRow();
         if (!row || !row.consult_url) return;
-        window.open(row.consult_url, '_blank');
+        // Ouvrir dans le même onglet pour que le collecteur reste dans son contexte
+        window.location.href = row.consult_url;
     }
 
     function ouvrirModification() {
@@ -839,6 +839,32 @@
         tab.addEventListener('click', () => activerGroupe(Number(tab.dataset.groupId)));
     });
 
+    // Charger les groupes depuis la BDD et construire les onglets
+    async function chargerGroupes() {
+        try {
+            const groupes = await fetchJson('/api/groupes');
+            const tabsWrap = document.getElementById('group-tabs');
+            groupes.forEach(g => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'group-tab';
+                btn.dataset.groupId = g.id;
+                // Label court selon le nom
+                const nom = g.nom || '';
+                let label = nom;
+                if (nom.toLowerCase().includes('gouvernance')) label = '🏛️ GT1 — Gouvernance';
+                else if (nom.toLowerCase().includes('travail')) label = '💼 GT2 — Travail';
+                else if (nom.toLowerCase().includes('fonction')) label = '👤 GT3 — Fonction Publique';
+                btn.textContent = label;
+                btn.addEventListener('click', () => activerGroupe(g.id));
+                tabsWrap.appendChild(btn);
+            });
+        } catch(e) {
+            console.error('Erreur chargement groupes:', e);
+        }
+    }
+
+    chargerGroupes();
     chargerDonnees(1);
 </script>
 {% endblock %}

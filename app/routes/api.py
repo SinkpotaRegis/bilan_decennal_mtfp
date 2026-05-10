@@ -187,8 +187,15 @@ def _build_recap_item(row):
 def _load_recap_rows(groupe_id, filters):
     _ensure_kpis_annuels_metadata_columns()
 
-    params = {'groupe_id': groupe_id}
-    where_clauses = ['k.groupe_id = :groupe_id']
+    params = {}
+    where_clauses = ['1=1']
+    try:
+        gid = int(groupe_id) if groupe_id else 0
+    except (ValueError, TypeError):
+        gid = 0
+    if gid > 0:
+        where_clauses.append('k.groupe_id = :groupe_id')
+        params['groupe_id'] = gid
 
     if filters.get('code'):
         where_clauses.append('LOWER(k.code) LIKE :code')
@@ -204,8 +211,18 @@ def _load_recap_rows(groupe_id, filters):
 
     scope_role = current_user.role
     if scope_role == 'collecteur':
-        where_clauses.append('ka.created_by = :created_by')
         params['created_by'] = current_user.id
+        user_dirs = [d.strip().upper() for d in (current_user.structure or '').split(',') if d.strip()]
+        if user_dirs:
+            dir_in = "','".join(user_dirs)
+            where_clauses.append(
+                "(ka.created_by = :created_by "
+                "OR UPPER(COALESCE(NULLIF(TRIM(ka.direction_concernee),''), "
+                "k.axe_strategique, '')) "
+                "IN ('" + dir_in + "'))"
+            )
+        else:
+            where_clauses.append('ka.created_by = :created_by')
     elif scope_role == 'validateur':
         direction = (current_user.structure or current_user.direction or '').strip()
         if direction:
@@ -456,9 +473,10 @@ def get_kpi_annuel(id):
                 'annee': annee,
                 'numerateur': data.get(annee, {}).get('numerateur', 0),
                 'denominateur': data.get(annee, {}).get('denominateur', 0),
-                'valeur': data.get(annee, {}).get('valeur', 0),
+                'valeur': data.get(annee, {}).get('valeur', None),  # None = non saisi
                 'commentaire': data.get(annee, {}).get('commentaire', ''),
-                'fichiers': fichiers_par_annee.get(annee, [])
+                'fichiers': fichiers_par_annee.get(annee, []),
+                'nb_preuves': len(fichiers_par_annee.get(annee, [])),
             })
         return jsonify(annuel)
     except Exception as e:
@@ -2342,7 +2360,9 @@ def api_collecteur_recap_soumissions():
 
     try:
         # fonction _load_recap_rows() pour récup toutes les lignes d'indicateurs soumis par le collecteur
-        items = _load_recap_rows(request.args.get('groupe_id', 1, type=int), filters)
+        # groupe_id=0 = tous les groupes
+        groupe_id = request.args.get('groupe_id', 0, type=int)
+        items = _load_recap_rows(groupe_id, filters)
         payload = _paginate_items(items, page, per_page)
         return jsonify(payload)
     except Exception as e:
@@ -2365,7 +2385,8 @@ def api_validateur_recap_soumissions():
     }
 
     try:
-        items = _load_recap_rows(request.args.get('groupe_id', 1, type=int), filters)
+        groupe_id = request.args.get('groupe_id', 0, type=int)
+        items = _load_recap_rows(groupe_id, filters)
         payload = _paginate_items(items, page, per_page)
         return jsonify(payload)
     except Exception as e:

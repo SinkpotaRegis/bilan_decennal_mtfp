@@ -62,9 +62,11 @@
                     </div>
                     <div class="kff">
                         <label>Groupe thématique <span class="req">*</span></label>
-                        <select id="kf-groupe" name="groupe_id" required>
+                        <select id="kf-groupe" name="groupe_id" required
+                                onchange="calculerProchainCode(this.options[this.selectedIndex].text)">
                             <option value="">Chargement…</option>
                         </select>
+                        <div class="kff-hint">Le code sera mis à jour automatiquement</div>
                     </div>
                     <div class="kff">
                         <label>Direction concernée <span class="req">*</span></label>
@@ -293,6 +295,63 @@ function ouvrirModalKpi() {
     document.getElementById('kpiModalOverlay').style.display = 'flex';
     document.body.style.overflow = 'hidden';
     majFormule();
+    /* Pré-remplir le code avec le prochain disponible */
+    calculerProchainCode();
+}
+
+/* ── Calcule le prochain code disponible depuis l'API ── */
+function calculerProchainCode(groupeForce) {
+    var sel       = document.getElementById('kf-groupe');
+    var inputCode = document.getElementById('kf-code');
+    if (!inputCode) return;
+
+    /* Déterminer GT depuis le texte du groupe */
+    var nomGroupe = groupeForce || '';
+    if (!nomGroupe && sel && sel.selectedIndex > 0) {
+        nomGroupe = sel.options[sel.selectedIndex].text || '';
+    }
+
+    var gt = 'GT1';
+    var nomLow = nomGroupe.toLowerCase();
+    if (nomLow.includes('travail') || nomLow.includes('gt2'))       gt = 'GT2';
+    else if (nomLow.includes('fonction') || nomLow.includes('gt3')) gt = 'GT3';
+
+    /* Marquer en chargement */
+    inputCode.value = '…';
+    inputCode.style.color = '#aaa';
+
+    fetch('/admin/api/kpis/liste')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var kpis   = data.kpis || [];
+            var prefix = gt + 'PKI';
+
+            /* Extraire les numéros existants pour ce groupe */
+            var nums = [];
+            kpis.forEach(function(k) {
+                var code = (k.code || '').toUpperCase();
+                if (code.startsWith(prefix)) {
+                    var n = parseInt(code.replace(prefix, ''), 10);
+                    if (!isNaN(n)) nums.push(n);
+                }
+            });
+
+            /* Prochain = max + 1 (ou 1 si vide) */
+            var next     = nums.length > 0 ? Math.max.apply(null, nums) + 1 : 1;
+            var nextCode = prefix + String(next).padStart(2, '0');
+
+            inputCode.value = nextCode;
+            inputCode.style.color       = '#1a2e1a';
+            inputCode.style.background  = '#f0f7f2';
+            inputCode.style.borderColor = '#006633';
+            inputCode.style.fontWeight  = '700';
+            inputCode.title = 'Code généré automatiquement — modifiable si nécessaire';
+        })
+        .catch(function() {
+            inputCode.value = '';
+            inputCode.style.color = '';
+            inputCode.style.background = '';
+        });
 }
 
 /* ── Ouvrir pour éditer ── */
@@ -407,26 +466,76 @@ async function soumettreKpi(e) {
 
         if (data.status === 'success') {
             fermerModalKpi();
-            /* Recharger la liste des KPIs dans l'admin si la fonction existe */
-            if (typeof chargerListeKpis === 'function') chargerListeKpis();
-            /* Toast global */
-            if (window.swalSuccess) {
-                window.swalSuccess(
-                    kpiEditId ? 'KPI modifié' : 'KPI créé',
-                    kpiEditId ? 'Les modifications ont été enregistrées.' : 'Le KPI ' + data.code + ' a été créé. Page accessible sur /kpi/' + data.code.toLowerCase()
-                );
-            } else {
-                alert((kpiEditId ? 'KPI modifié.' : 'KPI créé : ') + (data.code || ''));
+
+            /* Recharger la liste */
+            if (typeof chargerKpis === 'function') chargerKpis();
+            else if (typeof chargerListeKpis === 'function') chargerListeKpis();
+
+            /* ── Notification fiable (SweetAlert2 ou toast interne) ── */
+            var titre  = kpiEditId ? 'KPI modifié ✅' : 'KPI créé ✅';
+            var message = kpiEditId
+                ? 'Les modifications ont été enregistrées.'
+                : 'Le KPI ' + data.code + ' a été créé.\nPage : /kpi/' + data.code.toLowerCase();
+
+            /* Attendre que Swal soit disponible (chargé en async) */
+            function afficherNotif() {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success', title: titre, text: message,
+                        timer: 3500, timerProgressBar: true,
+                        showConfirmButton: false,
+                        position: 'top-end', toast: true,
+                        background: '#e8f5e9', color: '#1b5e20',
+                    });
+                } else {
+                    afficherToastModal(titre + ' — ' + message, 'success');
+                }
             }
+            /* Délai court pour s'assurer que Swal est chargé */
+            setTimeout(afficherNotif, 100);
         } else {
-            err.textContent = '❌ ' + (data.error || 'Erreur inconnue');
+            err.innerHTML = '❌ ' + (data.error || 'Erreur inconnue');
         }
     } catch(ex) {
-        err.textContent = '❌ Erreur réseau : ' + ex.message;
+        err.innerHTML = '❌ Erreur réseau : ' + ex.message;
     } finally {
         btn.disabled = false;
         icon.textContent = '💾';
         txt.textContent  = kpiEditId ? 'Enregistrer les modifications' : 'Créer le KPI';
     }
+}
+
+/* ── Toast CSS natif (affiché si SweetAlert2 absent) ── */
+function afficherToastModal(msg, type) {
+    var t = document.getElementById('_kpiToastInternal');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = '_kpiToastInternal';
+        t.style.cssText = [
+            'position:fixed','bottom:28px','right:28px',
+            'padding:14px 22px','border-radius:12px','font-size:.88rem',
+            'font-weight:600','z-index:99999','max-width:380px',
+            'box-shadow:0 8px 25px rgba(0,0,0,.18)',
+            'opacity:0','transform:translateY(16px)',
+            'transition:all .35s','pointer-events:none','line-height:1.5'
+        ].join(';');
+        document.body.appendChild(t);
+    }
+    var bg = type === 'success' ? '#e8f5e9' : '#ffebee';
+    var co = type === 'success' ? '#1b5e20' : '#b71c1c';
+    t.style.background = bg;
+    t.style.color      = co;
+    t.style.border     = '1px solid ' + (type === 'success' ? '#a5d6a7' : '#ffcdd2');
+    t.textContent = msg;
+    /* Afficher */
+    requestAnimationFrame(function() {
+        t.style.opacity = '1';
+        t.style.transform = 'translateY(0)';
+    });
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function() {
+        t.style.opacity = '0';
+        t.style.transform = 'translateY(16px)';
+    }, 4000);
 }
 </script>
