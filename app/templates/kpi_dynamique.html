@@ -702,11 +702,27 @@ async function enregistrerLigne(annee) {
         return;
     }
 
+    /* ── Preuve obligatoire : vérifier AVANT d'envoyer ── */
+    const _nbSauves  = (fichiersDejaSauves[annee] || []).length;
+    const _nbAttente = (fichiersEnAttente[annee]  || []).length;
+    if (_nbSauves + _nbAttente === 0) {
+        toast(`⚠️ Année ${annee} : joignez au moins un document preuve.`, 'error');
+        const _btnJ = document.querySelector(`#preuves-cell-${annee} .btn-preuve`);
+        if (_btnJ) {
+            _btnJ.style.cssText += ';border-color:#e53935;background:#ffebee;color:#c62828';
+            setTimeout(() => { _btnJ.style.cssText = _btnJ.style.cssText
+                .replace(';border-color:#e53935','').replace(';background:#ffebee','')
+                .replace(';color:#c62828',''); }, 3000);
+        }
+        return;
+    }
+
     btn.disabled = true;
     spin.style.display = 'inline-block';
     btntxt.textContent = '';
 
     try {
+        /* Étape 1 : enregistrer la valeur en BDD */
         const res = await fetch(`/api/kpis/annuel/update/${KPI_ID}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -715,7 +731,7 @@ async function enregistrerLigne(annee) {
                 numerateur:   parseFloat(numEl.value) || 0,
                 denominateur: denEl ? (parseFloat(denEl.value) || 0) : 0,
                 commentaire:  comEl ? comEl.value.trim() : '',
-                direction:    DIRECTION,   /* ← direction auto injectée */
+                direction:    DIRECTION,
             })
         });
         const data = await res.json();
@@ -725,8 +741,8 @@ async function enregistrerLigne(annee) {
             if (data.valeur !== undefined) {
                 valEl.innerHTML = `<strong>${Number(data.valeur).toFixed(2)}</strong> <span style="color:#888;font-size:.78rem">${UNITE}</span>`;
             }
-            /* Uploader les preuves liées à cette ligne */
-            if ((fichiersEnAttente[annee] || []).length > 0) {
+            /* Étape 2 : uploader les preuves en attente */
+            if (_nbAttente > 0) {
                 await uploaderFichiersAnnee(annee, data.kpi_annuel_id);
             }
             toast(`✅ Année ${annee} enregistrée avec succès.`, 'success');
@@ -754,6 +770,32 @@ async function soumettreToutes() {
     btn.disabled = true;
     icon.textContent  = '⏳';
     texte.textContent = 'Enregistrement en cours…';
+
+    /* Vérifier preuves pour toutes les années renseignées */
+    const _anneesManquantes = [];
+    for (const annee of ANNEES) {
+        const _n = document.getElementById(`inp-num-${KPI_ID}-${annee}`);
+        if (!_n || _n.value.trim() === '') continue;
+        const _s = (fichiersDejaSauves[annee]||[]).length + (fichiersEnAttente[annee]||[]).length;
+        if (_s === 0) _anneesManquantes.push(annee);
+    }
+    if (_anneesManquantes.length > 0) {
+        btn.disabled = false;
+        icon.textContent  = '⚠️';
+        texte.textContent = 'Preuves manquantes';
+        toast(`⚠️ Preuves manquantes pour : ${_anneesManquantes.join(', ')}. Joignez un fichier par année.`, 'error');
+        _anneesManquantes.forEach(a => {
+            const _b = document.querySelector(`#preuves-cell-${a} .btn-preuve`);
+            if (_b) {
+                _b.style.cssText += ';border-color:#e53935;background:#ffebee;color:#c62828';
+                setTimeout(() => { _b.style.cssText = _b.style.cssText
+                    .replace(';border-color:#e53935','').replace(';background:#ffebee','')
+                    .replace(';color:#c62828',''); }, 3500);
+            }
+        });
+        setTimeout(() => { icon.textContent='✅'; texte.textContent='Enregistrer toutes les années'; }, 4000);
+        return;
+    }
 
     let ok = 0, err = 0;
     for (const annee of ANNEES) {

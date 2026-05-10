@@ -187,77 +187,124 @@ def _build_recap_item(row):
 def _load_recap_rows(groupe_id, filters):
     _ensure_kpis_annuels_metadata_columns()
 
+    # ── Construction sécurisée de la requête ─────────────────────────────────
+    # On construit la clause WHERE dynamiquement avec WHERE 1=1 comme base
     params = {}
-    where_clauses = ['1=1']
+    extra_where = []
+
+    # Filtre groupe thématique (0 ou absent = tous)
     try:
-        gid = int(groupe_id) if groupe_id else 0
+        gid = int(groupe_id) if groupe_id is not None else 0
     except (ValueError, TypeError):
         gid = 0
     if gid > 0:
-        where_clauses.append('k.groupe_id = :groupe_id')
+        extra_where.append('k.groupe_id = :groupe_id')
         params['groupe_id'] = gid
 
+    # Filtres texte
     if filters.get('code'):
-        where_clauses.append('LOWER(k.code) LIKE :code')
+        extra_where.append('LOWER(k.code) LIKE :code')
         params['code'] = f"%{filters['code'].strip().lower()}%"
-
     if filters.get('indicateur'):
-        where_clauses.append('LOWER(k.indicateur) LIKE :indicateur')
+        extra_where.append('LOWER(k.indicateur) LIKE :indicateur')
         params['indicateur'] = f"%{filters['indicateur'].strip().lower()}%"
-
     if filters.get('annee'):
-        where_clauses.append('ka.annee = :annee')
+        extra_where.append('ka.annee = :annee')
         params['annee'] = int(filters['annee'])
 
+    # ── Filtre selon le rôle ──────────────────────────────────────────────────
     scope_role = current_user.role
+
     if scope_role == 'collecteur':
-        params['created_by'] = current_user.id
+        # Le collecteur voit UNIQUEMENT les soumissions liées à sa direction
+        # Logique : direction du KPI (axe_strategique) ∈ directions du collecteur
         user_dirs = [d.strip().upper() for d in (current_user.structure or '').split(',') if d.strip()]
+
         if user_dirs:
-            dir_in = "','".join(user_dirs)
-            where_clauses.append(
-                "(ka.created_by = :created_by "
-                "OR UPPER(COALESCE(NULLIF(TRIM(ka.direction_concernee),''), "
-                "k.axe_strategique, '')) "
-                "IN ('" + dir_in + "'))"
+            # Construire la liste pour IN avec des paramètres nommés sécurisés
+            dir_params = {}
+            dir_placeholders = []
+            for i, d in enumerate(user_dirs):
+                key = f'udir{i}'
+                dir_params[key] = d
+                dir_placeholders.append(f':udir{i}')
+            params.update(dir_params)
+            params['uid'] = current_user.id
+
+            in_clause = ', '.join(dir_placeholders)
+            extra_where.append(
+                f"(ka.created_by = :uid "
+                f"OR UPPER(COALESCE(NULLIF(TRIM(ka.direction_concernee), ''), "
+                f"NULLIF(TRIM(k.axe_strategique), ''), '')) IN ({in_clause}))"
             )
         else:
-            where_clauses.append('ka.created_by = :created_by')
-    elif scope_role == 'validateur':
-        direction = (current_user.structure or current_user.direction or '').strip()
-        if direction:
-            where_clauses.append("LOWER(COALESCE(NULLIF(TRIM(ka.direction_concernee), ''), g.nom)) = LOWER(:direction)")
-            params['direction'] = direction
-        else:
-            where_clauses.append('1 = 0')
+            # Aucune direction assignée → uniquement ses propres soumissions
+            extra_where.append('ka.created_by = :uid')
+            params['uid'] = current_user.id
 
-    rows = db.session.execute(
-        text(f'''
-            SELECT
-                ka.id AS recap_id,
-                ka.kpi_id,
-                ka.annee,
-                k.code,
-                k.indicateur,
-                ka.valeur_calculee,
-                ka.commentaire,
-                COALESCE(NULLIF(TRIM(ka.direction_concernee), ''), g.nom) AS direction_concernee,
-                g.nom AS groupe_nom,
-                ka.created_at,
-                ka.created_by,
-                u.username AS submitter_username
-            FROM kpis_annuels ka
-            JOIN kpis k ON k.id = ka.kpi_id
-            JOIN groupes_thematiques g ON g.id = k.groupe_id
-            LEFT JOIN users u ON u.id = ka.created_by
-            WHERE {' AND '.join(where_clauses)}
-            ORDER BY COALESCE(datetime(ka.created_at), '1970-01-01 00:00:00') DESC, k.code ASC, ka.id DESC
-        '''),
-        params
-    ).fetchall()
+    elif scope_role == 'validateur':
+        # Le validateur voit les soumissions de sa propre direction
+        user_dirs = [d.strip().upper() for d in (current_user.structure or '').split(',') if d.strip()]
+        if user_dirs:
+            dir_params = {}
+            dir_placeholders = []
+            for i, d in enumerate(user_dirs):
+                key = f'vdir{i}'
+                dir_params[key] = d
+                dir_placeholders.append(f':vdir{i}')
+            params.update(dir_params)
+            in_clause = ', '.join(dir_placeholders)
+            extra_where.append(
+                f"UPPER(COALESCE(NULLIF(TRIM(ka.direction_concernee), ''), "
+                f"NULLIF(TRIM(k.axe_strategique), ''), '')) IN ({in_clause})"
+            )
+        else:
+            extra_where.append('1 = 0')
+    # Admin : pas de filtre direction → voit tout
+
+    # ── Construction de la clause WHERE finale ────────────────────────────────
+    where_sql = 'WHERE 1=1'
+    if extra_where:
+        where_sql += ' AND ' + ' AND '.join(extra_where)
+
+    sql = f'''
+        SELECT
+            ka.id              AS recap_id,
+            ka.kpi_id,
+            ka.annee,
+            k.code,
+            k.indicateur,
+            ka.valeur_calculee,
+            ka.commentaire,
+            COALESCE(NULLIF(TRIM(ka.direction_concernee), ''),
+                     NULLIF(TRIM(k.axe_strategique), ''),
+                     g.nom)   AS direction_concernee,
+            g.nom              AS groupe_nom,
+            ka.created_at,
+            ka.created_by,
+            u.username         AS submitter_username
+        FROM kpis_annuels ka
+        JOIN kpis k             ON k.id = ka.kpi_id
+        JOIN groupes_thematiques g ON g.id = k.groupe_id
+        LEFT JOIN users u       ON u.id = ka.created_by
+        {where_sql}
+        ORDER BY
+            COALESCE(datetime(ka.created_at), '1970-01-01 00:00:00') DESC,
+            k.code ASC,
+            ka.id DESC
+    '''
+
+    try:
+        rows = db.session.execute(text(sql), params).fetchall()
+    except Exception as e:
+        print(f"[_load_recap_rows] SQL error: {e}")
+        print(f"SQL: {sql}")
+        print(f"Params: {params}")
+        return []
 
     items = [_build_recap_item(row) for row in rows]
 
+    # Filtre statut côté Python (après validation)
     if filters.get('statut'):
         statut = _normalize_validation_status(filters.get('statut'))
         items = [item for item in items if item['validation_status'] == statut]
