@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription — Bilan Décennal MTFP</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --green-deep:  #0a2e1a;
+            --green-mid:   #1a4a2a;
+            --green-main:  #1d6f42;
+            --green-btn:   #006633;
+            --orange:      #ff8c00;
+            --text:        #1a1a2e;
+            --text-muted:  #6b7280;
+            --border:      #dde3ec;
+            --bg-input:    #f8fafc;
+            --radius:      10px;
+        }
+
+        body {
+            font-family: 'DM Sans', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #006633 0%, #008844 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+        }
+
+        /* ── Carte principale ── */
+        .register-container {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 520px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            animation: fadeUp .45s cubic-bezier(.4,0,.2,1) both;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Header ── */
+        .register-header {
+            background: linear-gradient(135deg, var(--green-deep) 0%, var(--green-mid) 100%);
+            padding: 30px 36px 26px;
+            text-align: center;
+            position: relative;
+        }
+        .register-header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; left: 0; right: 0;
+            height: 36px;
+            background: white;
+            clip-path: ellipse(55% 100% at 50% 100%);
+        }
+        .header-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,140,0,.18);
+            border: 1px solid rgba(255,140,0,.35);
+            border-radius: 30px;
+            padding: 4px 13px;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--orange);
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+        .register-header h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.65rem;
+            color: #fff;
+        }
+        .register-header p {
+            color: rgba(255,255,255,.6);
+            font-size: .82rem;
+            margin-top: 5px;
+        }
+
+        /* ── Corps ── */
+        .register-body { padding: 28px 36px 34px; }
+
+        /* Alertes flash */
+        .flash-message {
+            padding: 11px 14px;
+            border-radius: 9px;
+            margin-bottom: 18px;
+            font-size: .82rem;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+        .flash-success { background: #e8f5e9; color: #1b5e20; border-left: 4px solid #2e7d32; }
+        .flash-danger  { background: #ffebee; color: #b71c1c; border-left: 4px solid #e53935; }
+
+        /* ── Grille formulaire ── */
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .form-group { margin-bottom: 16px; }
+
+        label {
+            display: block;
+            font-size: .78rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+        label .req { color: var(--orange); margin-left: 2px; }
+
+        .input-wrap { position: relative; }
+        .input-wrap .ico {
+            position: absolute;
+            left: 11px; top: 50%;
+            transform: translateY(-50%);
+            color: #c0c8d0;
+            font-size: 12.5px;
+            pointer-events: none;
+            transition: color .2s;
+        }
+        .input-wrap input { padding-left: 33px !important; }
+        .input-wrap .ico-right {
+            left: auto; right: 11px;
+            cursor: pointer;
+            pointer-events: all;
+        }
+        .input-wrap input:focus ~ .ico { color: var(--green-main); }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius);
+            font-family: 'DM Sans', sans-serif;
+            font-size: .85rem;
+            color: var(--text);
+            background: var(--bg-input);
+            transition: border-color .2s, box-shadow .2s;
+            outline: none;
+        }
+        input:focus {
+            border-color: var(--green-main);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(29,111,66,.1);
+        }
+        input::placeholder { color: #bcc4ce; }
+
+        /* ── Séparateur ── */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 6px 0 18px;
+            color: var(--text-muted);
+            font-size: .73rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+        .divider::before, .divider::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+
+        /* ══════════════════════════════════════════
+           BLOC MULTI-SELECT DIRECTIONS (select natif)
+           ══════════════════════════════════════════ */
+
+        /* Déclencheur du dropdown personnalisé */
+        .dir-trigger {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius);
+            font-family: 'DM Sans', sans-serif;
+            font-size: .85rem;
+            color: var(--text-muted);
+            background: var(--bg-input);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: border-color .2s, box-shadow .2s;
+            text-align: left;
+            gap: 8px;
+        }
+        .dir-trigger.open,
+        .dir-trigger:focus {
+            border-color: var(--green-main);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(29,111,66,.1);
+            outline: none;
+        }
+        .dir-trigger.has-value { color: var(--text); }
+        .dir-trigger .chevron {
+            font-size: 11px; color: #b0bec5; flex-shrink: 0;
+            transition: transform .25s;
+        }
+        .dir-trigger.open .chevron { transform: rotate(180deg); }
+
+        /* Panneau déroulant */
+        .dir-panel {
+            display: none;
+            border: 1.5px solid var(--green-main);
+            border-radius: var(--radius);
+            background: #fff;
+            box-shadow: 0 10px 35px rgba(0,0,0,.12);
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        .dir-panel.open {
+            display: block;
+            animation: dropIn .2s ease;
+        }
+        @keyframes dropIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Recherche dans le panneau */
+        .dir-search {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            border-bottom: 1px solid var(--border);
+            background: #fafcfd;
+        }
+        .dir-search i { color: #b0bec5; font-size: 12px; }
+        .dir-search input {
+            border: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+            background: transparent !important;
+            padding: 0 !important;
+            font-size: .82rem;
+            color: var(--text);
+            width: 100%;
+        }
+
+        /* Groupe thématique */
+        .dir-group-header {
+            padding: 7px 12px 3px;
+            font-size: .68rem;
+            font-weight: 700;
+            color: var(--orange);
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            background: #fffaf0;
+            border-bottom: 1px solid #ffe8b0;
+        }
+
+        /* Option individuelle */
+        .dir-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            cursor: pointer;
+            transition: background .14s;
+            user-select: none;
+        }
+        .dir-option:hover { background: #f0f7f2; }
+        .dir-option.selected { background: #e8f5e9; }
+
+        .dir-checkbox {
+            width: 17px; height: 17px;
+            border: 2px solid var(--border);
+            border-radius: 5px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            transition: all .15s;
+        }
+        .dir-option.selected .dir-checkbox {
+            background: var(--green-main);
+            border-color: var(--green-main);
+        }
+        .dir-checkbox i { color: #fff; font-size: 9px; display: none; }
+        .dir-option.selected .dir-checkbox i { display: block; }
+
+        .dir-label { flex: 1; min-width: 0; }
+        .dir-label-code {
+            font-size: .76rem; font-weight: 700;
+            color: var(--green-main);
+        }
+        .dir-label-nom {
+            font-size: .74rem; color: var(--text-muted);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        /* Liste scrollable */
+        .dir-list-wrap {
+            max-height: 210px;
+            overflow-y: auto;
+        }
+        .dir-list-wrap::-webkit-scrollbar { width: 4px; }
+        .dir-list-wrap::-webkit-scrollbar-thumb { background: #c5d9c9; border-radius: 4px; }
+
+        /* Pied : tout sélectionner / effacer */
+        .dir-footer {
+            display: flex;
+            justify-content: space-between;
+            padding: 7px 12px;
+            border-top: 1px solid var(--border);
+            background: #f8fafc;
+        }
+        .dir-footer button {
+            background: none; border: none;
+            font-size: .72rem; font-weight: 700;
+            cursor: pointer; padding: 3px 7px;
+            border-radius: 5px; transition: background .14s;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .dir-footer .btn-all  { color: var(--green-main); }
+        .dir-footer .btn-none { color: #e53935; }
+        .dir-footer button:hover { background: var(--border); }
+
+        /* Badges des sélections */
+        .dir-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 9px;
+        }
+        .dir-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #e8f5e9;
+            border: 1px solid #a5d6a7;
+            color: #1b5e20;
+            font-size: .72rem;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 20px;
+            animation: popIn .18s ease;
+        }
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(.8); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        .dir-badge .rm {
+            cursor: pointer; opacity: .5; font-size: 10px;
+            transition: opacity .14s; line-height: 1;
+        }
+        .dir-badge .rm:hover { opacity: 1; }
+
+        /* Compteur */
+        .dir-counter {
+            margin-top: 5px;
+            font-size: .72rem;
+            color: var(--text-muted);
+        }
+        .dir-counter strong { color: var(--green-main); }
+
+        /* Input caché qui contiendra la valeur finale */
+        #structureHidden { display: none; }
+
+        /* ── Bouton submit ── */
+        .btn-submit {
+            width: 100%;
+            padding: 13px;
+            background: var(--green-btn);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-family: 'DM Sans', sans-serif;
+            font-size: .9rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            transition: background .2s, transform .2s, box-shadow .2s;
+            box-shadow: 0 4px 15px rgba(0,102,51,.35);
+            margin-top: 6px;
+        }
+        .btn-submit:hover {
+            background: #004d26;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(0,102,51,.45);
+        }
+        .btn-submit:active { transform: translateY(0); }
+
+        /* ── Lien connexion ── */
+        .login-link {
+            text-align: center;
+            margin-top: 18px;
+            font-size: .82rem;
+            color: var(--text-muted);
+        }
+        .login-link a { color: var(--green-main); font-weight: 600; text-decoration: none; }
+        .login-link a:hover { text-decoration: underline; }
+
+        @media (max-width: 480px) {
+            .register-header, .register-body { padding-left: 22px; padding-right: 22px; }
+            .form-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="register-container">
+
+    <!-- Header -->
+    <div class="register-header">
+        <div class="header-badge">
+            <i class="fas fa-shield-alt" style="font-size:9px"></i>
+            Bilan Décennal MTFP 2016–2026
+        </div>
+        <h1>📝 Créer un compte</h1>
+        <p>Accédez à la plateforme de suivi des indicateurs</p>
+    </div>
+
+    <!-- Corps -->
+    <div class="register-body">
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category }}">
+                        <i class="fas {% if category == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" id="registerForm">
+
+            <!-- Ligne 1 : Nom d'utilisateur + Email -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Nom d'utilisateur <span class="req">*</span></label>
+                    <div class="input-wrap">
+                        <input type="text" name="username" placeholder="ex: jean.doe"
+                               value="{{ request.form.get('username', '') }}" required>
+                        <i class="fas fa-user ico"></i>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Adresse email <span class="req">*</span></label>
+                    <div class="input-wrap">
+                        <input type="email" name="email" placeholder="jean@mtfp.bj"
+                               value="{{ request.form.get('email', '') }}" required>
+                        <i class="fas fa-envelope ico"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ligne 2 : Mots de passe -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Mot de passe <span class="req">*</span></label>
+                    <div class="input-wrap">
+                        <input type="password" name="password" id="pwd" placeholder="Min. 6 caractères" required>
+                        <i class="fas fa-lock ico"></i>
+                        <i class="fas fa-eye ico ico-right" id="togglePwd"></i>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Confirmer le mot de passe <span class="req">*</span></label>
+                    <div class="input-wrap">
+                        <input type="password" name="confirm_password" id="pwd2" placeholder="Répéter" required>
+                        <i class="fas fa-lock ico"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Séparateur -->
+            <div class="divider">
+                <i class="fas fa-sitemap" style="color:var(--orange)"></i>
+                Directions affectées
+            </div>
+
+            <!-- ══ CHAMP STRUCTURE = MULTI-SELECT DIRECTIONS ══ -->
+            <div class="form-group">
+                <label>
+                    Directions / Structures <span class="req">*</span>
+                    <span style="font-weight:400; color:var(--text-muted); font-size:.72rem; margin-left:4px;">
+                        (plusieurs choix possibles)
+                    </span>
+                </label>
+
+                <!-- Déclencheur -->
+                <button type="button" class="dir-trigger" id="dirTrigger">
+                    <span id="dirTriggerText">Sélectionner une ou plusieurs directions…</span>
+                    <i class="fas fa-chevron-down chevron"></i>
+                </button>
+
+                <!-- Panneau déroulant -->
+                <div class="dir-panel" id="dirPanel">
+
+                    <!-- Barre de recherche -->
+                    <div class="dir-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="dirSearch" placeholder="Rechercher…" autocomplete="off">
+                    </div>
+
+                    <!-- Liste des options -->
+                    <div class="dir-list-wrap">
+                        <div id="dirList">
+
+                            <!-- ─── GROUPE : Administration ─── -->
+                            <!-- <div class="dir-group-header" data-group-header>
+                                <i class="fas fa-folder" style="font-size:9px;margin-right:4px"></i>
+                                Administration
+                            </div>
+                            <div class="dir-option" data-code="DPAF" data-nom="Direction de la Programmation et de l'Administration Financière" data-groupe="Administration">
+                                <div class="dir-checkbox"><i class="fas fa-check"></i></div>
+                                <div class="dir-label">
+                                    <div class="dir-label-code">DPAF</div>
+                                    <div class="dir-label-nom">Direction de la Programmation et de l'Administration Financière</div>
+                                </div>
+                            </div>
+                            <div class="dir-option" data-code="DRH" data-nom="Direction des Ressources Humaines" data-groupe="Administration">
+                                <div class="dir-checkbox"><i class="fas fa-check"></i></div>
+                                <div class="dir-label">
+                                    <div class="dir-label-code">DRH</div>
+                                    <div class="dir-label-nom">Direction des Ressources Humaines</div>
+                                </div>
+                            </div> -->
+
+                            <!-- ─── GROUPE : Travail ─── -->
+                            <div class="dir-group-header" data-group-header>
+                                <i class="fas fa-folder" style="font-size:9px;margin-right:4px"></i>
+                                <!-- Travail -->
+                            </div>
+                            <div class="dir-option" data-code="DSI" data-nom="Direction des Systèmes d'Informations" data-groupe="Travail">
+                                <div class="dir-checkbox"><i class="fas fa-check"></i></div>
+                                <div class="dir-label">
+                                    <div class="dir-label-code">DSI</div>
+                                    <div class="dir-label-nom">Direction des Systèmes d'Informations</div>
+                                </div>
+                            </div>
+                            <div class="dir-option" data-code="SGM" data-nom="Secretariat Général du Ministère" data-groupe="Travail">
+                                <div class="dir-checkbox"><i class="fas fa-check"></i></div>
+                                <div class="dir-label">
+                                    <div class="dir-label-code">SGM</div>
+                                    <div class="dir-label-nom">Secretariat Général du Ministère</div>
+                                </div>
+                            </div>
+                            <!-- <div class="dir-option" data-code="DIS" data-nom="Direction de l'Inspection Sociale" data-groupe="Travail">
+                                <div class="dir-checkbox"><i class="fas fa-check"></i></div>
+                                <div class="dir-label">
+                                    <div class="dir-label-code">DIS</div>
+                                    <div class="dir-label-nom">Direction de l'Inspection Sociale</div>
+                                </div>
+                            </div> -->
+                            <!-- <div class="dir-option" data-code="DSST" data-nom="Direction de la Sécurité et Santé au Travail" data-groupe="Travail">
+                                <div class="dir-checkbox"><i class="fas fa-check"></i></div>
+                                <div class="dir-label">
+                                    <div class="dir-label-code">DSST</div>
+                                    <div class="dir-label-nom">Direction de la Sécurité et Santé au Travail</div>
+                                </div>
+                            </div>
+                            <div class="dir-option" data-code="DLTE" data-nom="Direction de la Lutte contre le Travail des Enfants" data-groupe="Travail">
+                                <div class="dir-checkbox"><i class="fas fa-check"></i></div>
+                                <div class="dir-label">
+                                    <div class="dir-label-code">DLTE</div>
+                                    <div class="dir-label-nom">Direction de la Lutte contre le Travail des Enfants</div>
+                                </div>
+                            </div> -->
+
+                            <!-- ─── GROUPE : Fonction Publique ─── -->
+                            <div class="dir-group-header" data-group-header>
+                                <i class="fas fa-folder" style="font-size:9px;margin-right:4px"></i>
+                                <!-- DIRECTION -->
+                            </div>
+                            <div class="dir-option" data-code="DGFP" data-nom="Direction Générale de la Fonction Publique" data-groupe="Fonction Publique">
+                                <div class="dir-checkbox"><i class="fas fa-check"></i></div>
+                                <div class="dir-label">
+                                    <div class="dir-label-code">DGFP</div>
+                                    <div class="dir-label-nom">Direction Générale de la Fonction Publique</div>
+                                </div>
+                            </div>
+                            <div class="dir-option" data-code="DGT" data-nom="Direction Générale du Travail" data-groupe="Fonction Publique">
+                                <div class="dir-checkbox"><i class="fas fa-check"></i></div>
+                                <div class="dir-label">
+                                    <div class="dir-label-code">DGT</div>
+                                    <div class="dir-label-nom">Direction Générale du Travail</div>
+                                </div>
+                            </div>
+                            <div class="dir-option" data-code="DGRCE" data-nom="Direction Générale de Renforcement des Capacité et de l'Employabilité" data-groupe="Fonction Publique">
+                                <div class="dir-checkbox"><i class="fas fa-check"></i></div>
+                                <div class="dir-label">
+                                    <div class="dir-label-code">DGRCE</div>
+                                    <div class="dir-label-nom">Direction Générale de Renforcement des Capacité et de l'Employabilité</div>
+                                </div>
+                            </div>
+                            <div class="dir-option" data-code="DPAF" data-nom="Direction de la Planification et de l'Administation et des Finance" data-groupe="Fonction Publique">
+                                <div class="dir-checkbox"><i class="fas fa-check"></i></div>
+                                <div class="dir-label">
+                                    <div class="dir-label-code">DPAF</div>
+                                    <div class="dir-label-nom">Direction de la Planification et de l'Administation et des Finance</div>
+                                </div>
+                            </div>
+
+                            <!-- ─── GROUPE : Retraites ─── -->
+                            <div class="dir-group-header" data-group-header>
+                                <i class="fas fa-folder" style="font-size:9px;margin-right:4px"></i>
+                                Retraites
+                            </div>
+                            <div class="dir-option" data-code="FNRB" data-nom="Fonds National de Retraite du Bénin" data-groupe="Retraites">
+                                <div class="dir-checkbox"><i class="fas fa-check"></i></div>
+                                <div class="dir-label">
+                                    <div class="dir-label-code">FNRB</div>
+                                    <div class="dir-label-nom">Fonds National de Retraite du Bénin</div>
+                                </div>
+                            </div>
+
+                            <!-- ─── GROUPE : Gouvernance ─── -->
+                            <div class="dir-group-header" data-group-header>
+                                <i class="fas fa-folder" style="font-size:9px;margin-right:4px"></i>
+                                Gouvernance
+                            </div>
+                            <div class="dir-option" data-code="IGMT" data-nom="Inspection Générale du Ministère du Travail" data-groupe="Gouvernance">
+                                <div class="dir-checkbox"><i class="fas fa-check"></i></div>
+                                <div class="dir-label">
+                                    <div class="dir-label-code">IGSEP</div>
+                                    <div class="dir-label-nom">Inspection Générale du Service Exploitation et du Personnnel</div>
+                                </div>
+                            </div>
+                            <div class="dir-option" data-code="CCSP" data-nom="Cellule de Coordination et de Suivi des Projets" data-groupe="Gouvernance">
+                                <div class="dir-checkbox"><i class="fas fa-check"></i></div>
+                                <div class="dir-label">
+                                    <div class="dir-label-code">CCSP</div>
+                                    <div class="dir-label-nom">Cellule de Coordination et de Suivi des Projets</div>
+                                </div>
+                            </div>
+
+                        </div><!-- #dirList -->
+                    </div><!-- .dir-list-wrap -->
+
+                    <!-- Pied : actions rapides -->
+                    <div class="dir-footer">
+                        <button type="button" class="btn-all" id="btnSelectAll">
+                            <i class="fas fa-check-double"></i> Tout sélectionner
+                        </button>
+                        <button type="button" class="btn-none" id="btnClearAll">
+                            <i class="fas fa-times"></i> Tout effacer
+                        </button>
+                    </div>
+                </div><!-- .dir-panel -->
+
+                <!-- Badges des directions choisies -->
+                <div class="dir-badges" id="dirBadges"></div>
+
+                <!-- Compteur -->
+                <div class="dir-counter" id="dirCounter" style="display:none">
+                    <strong id="dirCountNum">0</strong> direction(s) sélectionnée(s)
+                </div>
+
+                <!--
+                    INPUT CACHÉ — c'est lui qui sera soumis au serveur Flask
+                    name="structure"  → correspond exactement au champ existant dans le modèle User
+                    La valeur sera "DPAF,DGT,DGFP" (codes séparés par des virgules)
+                -->
+                <input type="hidden" name="structure" id="structureHidden" required>
+
+            </div><!-- .form-group -->
+
+            <!-- Bouton submit -->
+            <button type="submit" class="btn-submit">
+                <i class="fas fa-user-plus"></i>
+                S'inscrire
+            </button>
+
+        </form>
+
+        <div class="login-link">
+            Déjà un compte ? <a href="/login">Se connecter</a>
+        </div>
+    </div>
+
+</div><!-- .register-container -->
+
+<script>
+(function () {
+    var trigger   = document.getElementById('dirTrigger');
+    var panel     = document.getElementById('dirPanel');
+    var list      = document.getElementById('dirList');
+    var search    = document.getElementById('dirSearch');
+    var badges    = document.getElementById('dirBadges');
+    var hidden    = document.getElementById('structureHidden');
+    var counter   = document.getElementById('dirCounter');
+    var countNum  = document.getElementById('dirCountNum');
+    var trigText  = document.getElementById('dirTriggerText');
+    var form      = document.getElementById('registerForm');
+
+    /* ── Pré-remplissage si retour après erreur Flask ──────────────
+       Flask renvoie le formulaire avec request.form.get('structure')
+       Ex: "DPAF,DGT" → on re-coche les options correspondantes       */
+    var preValue = "{{ request.form.get('structure', '') }}";
+    if (preValue) {
+        var preCodes = preValue.split(',').map(function(c){ return c.trim(); });
+        list.querySelectorAll('.dir-option').forEach(function(opt) {
+            if (preCodes.indexOf(opt.dataset.code) !== -1) {
+                opt.classList.add('selected');
+            }
+        });
+    }
+
+    /* ── Ouvrir / fermer ── */
+    trigger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var open = panel.classList.contains('open');
+        panel.classList.toggle('open', !open);
+        trigger.classList.toggle('open', !open);
+        if (!open) { search.focus(); }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!trigger.contains(e.target) && !panel.contains(e.target)) {
+            panel.classList.remove('open');
+            trigger.classList.remove('open');
+        }
+    });
+
+    /* ── Recherche ── */
+    search.addEventListener('input', function() {
+        var q = this.value.toLowerCase().trim();
+        list.querySelectorAll('.dir-option').forEach(function(opt) {
+            var match = !q
+                || opt.dataset.code.toLowerCase().includes(q)
+                || opt.dataset.nom.toLowerCase().includes(q);
+            opt.style.display = match ? '' : 'none';
+        });
+        /* Masquer les groupes si toutes leurs options sont masquées */
+        list.querySelectorAll('[data-group-header]').forEach(function(grp) {
+            var sib = grp.nextElementSibling;
+            var visible = false;
+            while (sib && !sib.hasAttribute('data-group-header')) {
+                if (sib.style.display !== 'none') visible = true;
+                sib = sib.nextElementSibling;
+            }
+            grp.style.display = visible ? '' : 'none';
+        });
+    });
+
+    /* ── Clic sur une option ── */
+    list.addEventListener('click', function(e) {
+        var opt = e.target.closest('.dir-option');
+        if (!opt) return;
+        opt.classList.toggle('selected');
+        sync();
+    });
+
+    /* ── Tout sélectionner / effacer ── */
+    document.getElementById('btnSelectAll').addEventListener('click', function(e) {
+        e.stopPropagation();
+        list.querySelectorAll('.dir-option').forEach(function(o){ o.classList.add('selected'); });
+        sync();
+    });
+    document.getElementById('btnClearAll').addEventListener('click', function(e) {
+        e.stopPropagation();
+        list.querySelectorAll('.dir-option').forEach(function(o){ o.classList.remove('selected'); });
+        sync();
+    });
+
+    /* ── Synchronisation centrale ── */
+    function sync() {
+        var selected = list.querySelectorAll('.dir-option.selected');
+        var codes = [];
+        selected.forEach(function(o){ codes.push(o.dataset.code); });
+
+        /* 1. Valeur de l'input caché → envoyée au serveur */
+        hidden.value = codes.join(',');
+
+        /* 2. Texte du déclencheur */
+        if (codes.length === 0) {
+            trigText.textContent = 'Sélectionner une ou plusieurs directions…';
+            trigger.classList.remove('has-value');
+        } else if (codes.length <= 2) {
+            trigText.textContent = codes.join(', ');
+            trigger.classList.add('has-value');
+        } else {
+            trigText.textContent = codes.length + ' directions sélectionnées';
+            trigger.classList.add('has-value');
+        }
+
+        /* 3. Badges */
+        badges.innerHTML = '';
+        codes.forEach(function(code) {
+            var badge = document.createElement('span');
+            badge.className = 'dir-badge';
+            badge.innerHTML = code + ' <span class="rm" data-code="' + code + '">✕</span>';
+            badges.appendChild(badge);
+        });
+        badges.querySelectorAll('.rm').forEach(function(rm) {
+            rm.addEventListener('click', function() {
+                var opt = list.querySelector('.dir-option[data-code="' + this.dataset.code + '"]');
+                if (opt) opt.classList.remove('selected');
+                sync();
+            });
+        });
+
+        /* 4. Compteur */
+        if (codes.length > 0) {
+            counter.style.display = 'block';
+            countNum.textContent = codes.length;
+        } else {
+            counter.style.display = 'none';
+        }
+    }
+
+    /* ── Afficher / masquer mot de passe ── */
+    document.getElementById('togglePwd').addEventListener('click', function() {
+        var pwd = document.getElementById('pwd');
+        var isText = pwd.type === 'text';
+        pwd.type = isText ? 'password' : 'text';
+        this.className = 'fas fa-' + (isText ? 'eye' : 'eye-slash') + ' ico ico-right';
+    });
+
+    /* ── Validation avant soumission ── */
+    form.addEventListener('submit', function(e) {
+        if (!hidden.value) {
+            e.preventDefault();
+            trigger.classList.add('open');
+            panel.classList.add('open');
+            trigger.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            trigger.style.borderColor = '#e53935';
+            trigger.style.boxShadow = '0 0 0 3px rgba(229,57,53,.15)';
+            setTimeout(function() {
+                trigger.style.borderColor = '';
+                trigger.style.boxShadow = '';
+            }, 2500);
+            alert('⚠️ Veuillez sélectionner au moins une direction affectée.');
+        }
+    });
+
+    /* Init (pré-remplissage) */
+    sync();
+
+})();
+</script>
+
+</body>
+</html>

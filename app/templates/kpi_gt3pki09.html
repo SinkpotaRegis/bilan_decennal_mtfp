@@ -1,0 +1,794 @@
+{% extends "base.html" %}
+{% block titre %}GT3PKI09 — Délai de notification des actes d'admission à la retraite{% endblock %}
+{% set page_active = 'kpi' %}
+
+{% block extra_css %}
+<style>
+    .header {
+        background: linear-gradient(135deg, #006633 0%, #008844 100%);
+        color: white; padding: 20px 25px; border-radius: 10px;
+        margin-bottom: 20px; display: flex; justify-content: space-between;
+        align-items: center; flex-wrap: wrap; gap: 10px;
+    }
+    .header h1 { font-size: 1.3rem; font-weight: 700; }
+    .header p  { font-size: 0.85rem; opacity: 0.9; margin-top: 4px; }
+    .badge-code {
+        background: rgba(255,255,255,0.2); padding: 6px 16px;
+        border-radius: 20px; font-weight: bold; font-size: 1rem; letter-spacing: 1px;
+    }
+    .badge-sem {
+        display: inline-flex; align-items: center; gap: 6px;
+        background: #e3f2fd; color: #1565c0; padding: 4px 12px;
+        border-radius: 20px; font-size: 0.78rem; font-weight: 700;
+        border: 1px solid #90caf9; margin-left: 10px;
+    }
+
+    /* ===== NOTE SPÉCIALE : valeurs négatives autorisées ===== */
+    .note-negative {
+        background: #fff8e1; border: 1px solid #ffe082;
+        border-radius: 8px; padding: 10px 16px; margin-bottom: 20px;
+        font-size: 0.83rem; color: #5d4037; display: flex; align-items: center; gap: 8px;
+    }
+
+    .fiche-kpi {
+        background: white; border-radius: 10px; padding: 20px;
+        margin-bottom: 20px; border-left: 5px solid #006633;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .fiche-kpi h2 { color: #006633; font-size: 1rem; margin-bottom: 12px; }
+    .fiche-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 10px; font-size: 0.85rem;
+    }
+    .fiche-item { display: flex; flex-direction: column; gap: 3px; }
+    .fiche-item label { color: #888; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.4px; }
+    .fiche-item span  { color: #333; font-weight: 500; }
+    .formule-box {
+        background: #f8fdf9; border: 1px dashed #006633;
+        border-radius: 8px; padding: 12px 16px;
+        margin-top: 12px; font-size: 0.85rem; color: #006633; text-align: center;
+    }
+
+    .saisie-section {
+        background: white; border-radius: 10px; padding: 25px;
+        margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .saisie-section h2 {
+        color: #006633; font-size: 1.05rem; margin-bottom: 20px;
+        padding-bottom: 10px; border-bottom: 2px solid #e8f5e9;
+        display: flex; align-items: center; gap: 8px;
+    }
+
+    .periode-selector {
+        display: flex; align-items: center; gap: 12px;
+        margin-bottom: 25px; flex-wrap: wrap;
+    }
+    .periode-selector label { font-weight: 600; color: #333; font-size: 0.95rem; }
+    .periode-selector select {
+        padding: 10px 16px; border: 2px solid #006633; border-radius: 8px;
+        font-size: 0.95rem; color: #006633; font-weight: bold;
+        background: white; cursor: pointer; outline: none; min-width: 130px;
+    }
+    .periode-selector select:focus { box-shadow: 0 0 0 3px rgba(0,102,51,0.15); }
+    .periode-sep { color: #bbb; font-size: 1.2rem; }
+
+    .periodes-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .periode-tab {
+        padding: 5px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;
+        cursor: pointer; border: 2px solid #ddd; background: #f5f5f5; color: #888;
+        transition: all 0.2s; display: flex; align-items: center; gap: 5px;
+    }
+    .periode-tab.active { background: #006633; color: white; border-color: #006633; }
+    .periode-tab .dot { width: 7px; height: 7px; border-radius: 50%; background: #66bb6a; }
+    .periode-tab.active .dot { background: white; }
+
+    #zone-saisie { display: none; }
+
+    /* ===== CARTE AGENT ===== */
+    .agent-card {
+        background: #fafffe; border: 1px solid #c8e6c9;
+        border-radius: 10px; padding: 18px; margin-bottom: 14px;
+        animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+    .agent-card .card-header {
+        display: flex; align-items: center;
+        justify-content: space-between; margin-bottom: 14px;
+    }
+    .agent-card .numero {
+        background: #006633; color: white; width: 28px; height: 28px;
+        border-radius: 50%; display: flex; align-items: center;
+        justify-content: center; font-size: 0.8rem; font-weight: bold;
+    }
+    .agent-card .titre-card { font-weight: 600; color: #006633; font-size: 0.9rem; flex: 1; margin-left: 10px; }
+    .btn-supprimer {
+        background: none; border: 1px solid #ffcccc; color: #e53935;
+        padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; cursor: pointer;
+    }
+    .btn-supprimer:hover { background: #ffebee; }
+
+    .fields-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 14px; align-items: end;
+    }
+    .field-group { display: flex; flex-direction: column; gap: 5px; }
+    .field-group label {
+        font-size: 0.78rem; font-weight: 600; color: #555;
+        text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .field-group input {
+        padding: 9px 12px; border: 1.5px solid #ddd; border-radius: 7px;
+        font-size: 0.88rem; color: #333; outline: none;
+        transition: border-color 0.2s; background: white;
+    }
+    .field-group input:focus { border-color: #006633; box-shadow: 0 0 0 3px rgba(0,102,51,0.1); }
+
+    /* ===== RÉSULTAT DÉLAI (peut être négatif = situation idéale) ===== */
+    .resultat-delai {
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 3px;
+        padding: 10px 14px; border-radius: 8px;
+        font-size: 0.85rem; font-weight: 600; min-height: 60px;
+        border: 1.5px solid #a5d6a7; background: #e8f5e9;
+        transition: all 0.3s;
+    }
+    .resultat-delai.negatif { background: #e8f5e9; border-color: #66bb6a; } /* idéal */
+    .resultat-delai.positif-ok  { background: #fff8e1; border-color: #ffe082; } /* acceptable */
+    .resultat-delai.positif-bad { background: #ffebee; border-color: #ffcdd2; } /* tard */
+    .resultat-delai .delai-nb { font-size: 1.2rem; font-weight: 800; }
+    .resultat-delai .delai-label { font-size: 0.72rem; color: #666; }
+    .resultat-delai .delai-attente { font-size: 0.82rem; color: #aaa; font-style: italic; }
+
+    .btn-ajouter {
+        display: flex; align-items: center; gap: 8px;
+        background: white; color: #006633; border: 2px dashed #006633;
+        padding: 12px 22px; border-radius: 8px; font-size: 0.9rem; font-weight: 600;
+        cursor: pointer; margin-top: 10px; transition: all 0.2s;
+        width: 100%; justify-content: center;
+    }
+    .btn-ajouter:hover { background: #e8f5e9; border-style: solid; }
+
+    .resume-periode {
+        margin-top: 16px; background: #f0fff4;
+        border: 1px solid #66bb6a; border-radius: 8px;
+        padding: 14px 18px; display: none;
+    }
+    .resume-grid { display: flex; gap: 30px; flex-wrap: wrap; align-items: center; }
+    .resume-stat { display: flex; flex-direction: column; }
+    .rs-label { font-size: 0.75rem; color: #666; text-transform: uppercase; }
+    .rs-value { font-size: 1.4rem; font-weight: 800; color: #006633; }
+    .rs-unit  { font-size: 0.75rem; color: #888; }
+
+    .section-soumettre {
+        background: white; border-radius: 10px; padding: 25px;
+        margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: none;
+    }
+    .section-soumettre h2 {
+        color: #006633; font-size: 1.05rem; margin-bottom: 18px;
+        padding-bottom: 10px; border-bottom: 2px solid #e8f5e9;
+    }
+    .recap-table-wrapper { overflow-x: auto; margin-bottom: 18px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th { background: #006633; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+    td { padding: 9px 14px; border-bottom: 1px solid #e8f5e9; color: #333; }
+    tr:nth-child(even) td { background: #f8fdf9; }
+    tr:hover td { background: #e8f5e9; }
+    .td-delai { font-weight: bold; color: #006633; }
+    tr.tr-total td { background: #e8f5e9; font-weight: bold; color: #006633; border-top: 2px solid #006633; }
+
+    .btn-soumettre {
+        background: linear-gradient(135deg, #006633, #008844);
+        color: white; border: none; padding: 14px 35px; border-radius: 8px;
+        font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+        display: flex; align-items: center; gap: 10px;
+    }
+    .btn-soumettre:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(0,102,51,0.3); }
+    .btn-soumettre:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    #section-resultats {
+        background: white; border-radius: 10px; padding: 25px;
+        margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: none;
+    }
+    #section-resultats h2 { color: #006633; font-size: 1.05rem; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid #e8f5e9; }
+    .result-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .result-card { background: linear-gradient(135deg, #006633, #1b8040); color: white; padding: 18px; border-radius: 10px; text-align: center; }
+    .rc-label { font-size: 0.75rem; opacity: 0.85; margin-bottom: 6px; }
+    .rc-value { font-size: 1.8rem; font-weight: 800; }
+    .rc-unit  { font-size: 0.75rem; opacity: 0.85; margin-top: 2px; }
+
+    .notif { padding: 14px 18px; border-radius: 8px; margin-bottom: 15px; font-size: 0.88rem; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+    .notif-success { background: #e8f5e9; border: 1px solid #a5d6a7; color: #2e7d32; }
+    .notif-error   { background: #ffebee; border: 1px solid #ffcdd2; color: #c62828; }
+    .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+    <div class="header">
+        <div>
+            <h1>🏛️ Collecte — Délai de notification des actes de retraite
+                <span class="badge-sem">📅 Semestriel</span>
+            </h1>
+            <p>Fonction Publique · Saisie des délais de notification par agent</p>
+        </div>
+        <div class="badge-code">GT3PKI09</div>
+    </div>
+
+    <!-- Note importante sur les valeurs négatives -->
+    <div class="note-negative">
+        ⭐ <strong>Note :</strong> Un délai <strong>négatif</strong> signifie que l'acte a été notifié
+        <em>avant</em> la date de départ à la retraite — c'est la <strong>situation idéale</strong>.
+        Un délai positif signifie que l'agent a été notifié après son départ.
+    </div>
+
+    <div class="fiche-kpi">
+        <h2>ℹ️ Fiche de l'indicateur</h2>
+        <div class="fiche-grid">
+            <div class="fiche-item">
+                <label>Intitulé</label>
+                <span>Délai de notification des actes d'admission à la retraite aux agents de l'État</span>
+            </div>
+            <div class="fiche-item">
+                <label>Unité de mesure</label>
+                <span>Jours calendaires (valeur moyenne — peut être négative)</span>
+            </div>
+            <div class="fiche-item">
+                <label>Fréquence de collecte</label>
+                <span>Semestrielle (S1 : Jan–Juin · S2 : Juil–Déc)</span>
+            </div>
+            <div class="fiche-item">
+                <label>Sources de vérification</label>
+                <span>DFP — registre des admissions · SIGRH · Rapports FNRB</span>
+            </div>
+        </div>
+        <div class="formule-box">
+            <strong>Formule : </strong>
+            ∑ (Date de notification de l'acte − Date de départ à la retraite) ÷ Nombre d'agents concernés
+            &nbsp;|&nbsp; <em>Résultat négatif = notification anticipée ✅</em>
+        </div>
+    </div>
+
+    <div class="saisie-section">
+        <h2>✏️ Saisie des délais par agent, par semestre et par année</h2>
+
+        <div class="periode-selector">
+            <label>📅 Année :</label>
+            <select id="select-annee" onchange="changerPeriode()">
+                <option value="">-- Année --</option>
+            </select>
+            <span class="periode-sep">·</span>
+            <label>Semestre :</label>
+            <select id="select-semestre" onchange="changerPeriode()">
+                <option value="">-- Semestre --</option>
+                <option value="S1">S1 (Janvier – Juin)</option>
+                <option value="S2">S2 (Juillet – Décembre)</option>
+            </select>
+            <span id="info-periode" style="font-size:0.82rem; color:#888;"></span>
+        </div>
+
+        <div class="periodes-tabs" id="periodes-tabs"></div>
+
+        <div id="zone-saisie">
+            <div id="liste-agents"></div>
+
+            <div class="resume-periode" id="resume-periode">
+                <div class="resume-grid">
+                    <div class="resume-stat">
+                        <span class="rs-label">Agents saisis</span>
+                        <span class="rs-value" id="rs-nb">0</span>
+                    </div>
+                    <div class="resume-stat">
+                        <span class="rs-label">Total des jours</span>
+                        <span class="rs-value" id="rs-total">—</span>
+                        <span class="rs-unit">jours cumulés</span>
+                    </div>
+                    <div class="resume-stat">
+                        <span class="rs-label">Délai moyen</span>
+                        <span class="rs-value" id="rs-moyenne">—</span>
+                        <span class="rs-unit">jours / agent</span>
+                    </div>
+                    <div class="resume-stat">
+                        <span class="rs-label">Situation</span>
+                        <span class="rs-value" id="rs-situation" style="font-size:1rem;">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-ajouter" onclick="ajouterAgent()">
+                ➕ Ajouter un agent pour <span id="label-periode-btn"></span>
+            </button>
+        </div>
+    </div>
+
+    <div class="section-soumettre" id="section-soumettre">
+        <h2>📤 Récapitulatif global — Prêt à soumettre</h2>
+        <div class="recap-table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Période</th>
+                        <th>Nb agents</th>
+                        <th>Total jours</th>
+                        <th>Délai moyen</th>
+                        <th>Situation</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-recap"></tbody>
+                <tfoot id="tfoot-recap"></tfoot>
+            </table>
+        </div>
+        <button class="btn-soumettre" id="btn-soumettre" onclick="soumettreDonnees()">
+            <span id="btn-icon">✅</span>
+            <span id="btn-texte">Soumettre et enregistrer</span>
+        </button>
+    </div>
+
+    <div id="section-resultats">
+        <h2>🏆 Résultats enregistrés</h2>
+        <div id="notif-result"></div>
+        <div class="result-cards" id="result-cards"></div>
+        <div class="recap-table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Année</th>
+                        <th>Nb agents</th>
+                        <th>Délai moyen (jours)</th>
+                        <th>Situation</th>
+                        <th>Statut</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-resultats"></tbody>
+            </table>
+        </div>
+    </div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+
+/* ==========================================================
+   ÉTAT GLOBAL
+   Structure: donneesParPeriode["2023-S1"] = [
+       { nom, dateDepart, dateNotification, delaiJours },
+       ...
+   ]
+   NB: delaiJours peut être négatif (notification avant départ = idéal)
+========================================================== */
+const etat = {
+    periodeActive:    null,
+    donneesParPeriode: {},
+    kpiId:            null
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('select-annee');
+    for (let a = 2026; a >= 2016; a--) {
+        const opt = document.createElement('option');
+        opt.value = a; opt.textContent = a;
+        sel.appendChild(opt);
+    }
+    recupererIdKpi();
+});
+
+async function recupererIdKpi() {
+    try {
+        const res  = await fetch('/api/kpis');
+        const kpis = await res.json();
+        const kpi  = kpis.find(k => k.code === 'GT3PKI09');
+        if (kpi) { etat.kpiId = kpi.id; console.log('GT3PKI09 ID:', etat.kpiId); }
+    } catch(e) { console.error(e); }
+}
+
+/* ==========================================================
+   CHANGER DE PÉRIODE
+========================================================== */
+function changerPeriode() {
+    const annee    = document.getElementById('select-annee').value;
+    const semestre = document.getElementById('select-semestre').value;
+
+    if (!annee || !semestre) {
+        document.getElementById('zone-saisie').style.display = 'none';
+        document.getElementById('info-periode').textContent  = '';
+        etat.periodeActive = null;
+        return;
+    }
+
+    const cle = `${annee}-${semestre}`;
+    etat.periodeActive = cle;
+    if (!etat.donneesParPeriode[cle]) etat.donneesParPeriode[cle] = [];
+
+    document.getElementById('zone-saisie').style.display = 'block';
+    document.getElementById('label-periode-btn').textContent = `${semestre} ${annee}`;
+
+    afficherAgentsPeriode(cle);
+    mettreAJourResume();
+    mettreAJourRecap();
+    mettreAJourOnglets();
+    mettreAJourInfo(cle);
+}
+
+/* ==========================================================
+   AFFICHER LES AGENTS D'UNE PÉRIODE
+========================================================== */
+function afficherAgentsPeriode(cle) {
+    const liste   = document.getElementById('liste-agents');
+    liste.innerHTML = '';
+    const agents = etat.donneesParPeriode[cle] || [];
+    if (agents.length === 0) {
+        ajouterAgent();
+    } else {
+        agents.forEach((_, i) => creerCarteAgent(cle, i));
+    }
+}
+
+/* ==========================================================
+   AJOUTER UN AGENT
+========================================================== */
+function ajouterAgent() {
+    if (!etat.periodeActive) return;
+    const cle = etat.periodeActive;
+    etat.donneesParPeriode[cle].push({
+        nom:             '',
+        dateDepart:      '',
+        dateNotification:'',
+        delaiJours:      null
+    });
+    creerCarteAgent(cle, etat.donneesParPeriode[cle].length - 1);
+    mettreAJourResume();
+}
+
+/* ==========================================================
+   CRÉER UNE CARTE AGENT
+   3 champs : nom/matricule, date de départ à la retraite,
+   date de notification de l'acte + délai calculé (peut être <0)
+========================================================== */
+function creerCarteAgent(cle, index) {
+    const liste = document.getElementById('liste-agents');
+    const data  = etat.donneesParPeriode[cle][index];
+    const num   = index + 1;
+    const [annee, sem] = cle.split('-');
+
+    const card = document.createElement('div');
+    card.className = 'agent-card';
+    card.id = `card-${cle}-${index}`;
+
+    card.innerHTML = `
+        <div class="card-header">
+            <div class="numero">${num}</div>
+            <div class="titre-card">Agent n°${num} — ${sem} ${annee}</div>
+            ${index > 0
+                ? `<button class="btn-supprimer" onclick="supprimerAgent('${cle}', ${index})">✕ Supprimer</button>`
+                : ''}
+        </div>
+        <div class="fields-grid">
+
+            <!-- Champ 1 : Nom ou matricule de l'agent -->
+            <div class="field-group" style="grid-column: span 2;">
+                <label>Nom / Matricule de l'agent</label>
+                <input type="text" id="nom-${cle}-${index}"
+                    placeholder="Ex : AHOUANDJI Koffi — Matricule 00234"
+                    value="${data.nom || ''}"
+                    oninput="etat.donneesParPeriode['${cle}'][${index}].nom = this.value">
+            </div>
+
+            <!-- Champ 2 : Date de départ à la retraite (limite d'âge atteinte) -->
+            <div class="field-group">
+                <label>📅 Date de départ à la retraite</label>
+                <input type="date" id="datedepart-${cle}-${index}"
+                    value="${data.dateDepart || ''}"
+                    onchange="calculerDelai('${cle}', ${index})">
+            </div>
+
+            <!-- Champ 3 : Date de notification officielle de l'arrêté -->
+            <div class="field-group">
+                <label>📅 Date de notification de l'acte</label>
+                <input type="date" id="datenotif-${cle}-${index}"
+                    value="${data.dateNotification || ''}"
+                    onchange="calculerDelai('${cle}', ${index})">
+            </div>
+
+            <!-- Champ 4 : Délai calculé (notification − départ) — peut être négatif -->
+            <div class="field-group">
+                <label>⏱ Délai calculé (jours)</label>
+                <div class="resultat-delai" id="delai-display-${cle}-${index}">
+                    ${afficherDelaiHtml(data.delaiJours)}
+                </div>
+            </div>
+
+        </div>`;
+
+    liste.appendChild(card);
+}
+
+/* ==========================================================
+   GÉNÉRER LE HTML D'AFFICHAGE DU DÉLAI
+   Couleurs :
+   - Négatif  → vert (notification avant départ = idéal)
+   - 0–30j    → jaune (acceptable)
+   - > 30j    → rouge (trop tard)
+========================================================== */
+function afficherDelaiHtml(delai) {
+    if (delai === null) {
+        return `<span class="delai-attente">Renseignez les deux dates</span>`;
+    }
+    let cls, emoji, libelle;
+    if (delai < 0) {
+        cls = 'negatif'; emoji = '✅';
+        libelle = `Notifié ${Math.abs(delai)}j avant le départ`;
+    } else if (delai <= 30) {
+        cls = 'positif-ok'; emoji = '⚠️';
+        libelle = 'Notifié après le départ (< 30j)';
+    } else {
+        cls = 'positif-bad'; emoji = '🔴';
+        libelle = 'Notifié tardivement (> 30j)';
+    }
+    return `
+        <span class="delai-nb" style="color:${delai < 0 ? '#2e7d32' : delai <= 30 ? '#e65100' : '#c62828'}">
+            ${delai > 0 ? '+' : ''}${delai} jours ${emoji}
+        </span>
+        <span class="delai-label">${libelle}</span>`;
+}
+
+/* ==========================================================
+   CALCULER LE DÉLAI ENTRE NOTIFICATION ET DÉPART
+   Formule : Date notification − Date départ
+   → Négatif = notification avant départ (idéal)
+   → Positif = notification après départ (retard)
+========================================================== */
+function calculerDelai(cle, index) {
+    const dateDepart = document.getElementById(`datedepart-${cle}-${index}`).value;
+    const dateNotif  = document.getElementById(`datenotif-${cle}-${index}`).value;
+    const div        = document.getElementById(`delai-display-${cle}-${index}`);
+
+    etat.donneesParPeriode[cle][index].dateDepart       = dateDepart;
+    etat.donneesParPeriode[cle][index].dateNotification = dateNotif;
+
+    if (dateDepart && dateNotif) {
+        const msDepart = new Date(dateDepart).getTime();
+        const msNotif  = new Date(dateNotif).getTime();
+        // Délai = notification - départ (négatif si notification avant départ)
+        const delai = Math.round((msNotif - msDepart) / (1000 * 60 * 60 * 24));
+        etat.donneesParPeriode[cle][index].delaiJours = delai;
+        div.innerHTML = afficherDelaiHtml(delai);
+
+        // Appliquer la classe de couleur sur le conteneur
+        div.className = 'resultat-delai ' + (delai < 0 ? 'negatif' : delai <= 30 ? 'positif-ok' : 'positif-bad');
+    } else {
+        etat.donneesParPeriode[cle][index].delaiJours = null;
+        div.innerHTML  = afficherDelaiHtml(null);
+        div.className  = 'resultat-delai';
+    }
+
+    mettreAJourResume();
+    mettreAJourRecap();
+}
+
+/* ==========================================================
+   SUPPRIMER UN AGENT
+========================================================== */
+function supprimerAgent(cle, index) {
+    if (!confirm(`Supprimer l'agent n°${index + 1} ?`)) return;
+    etat.donneesParPeriode[cle].splice(index, 1);
+    if (etat.donneesParPeriode[cle].length === 0) delete etat.donneesParPeriode[cle];
+    afficherAgentsPeriode(cle);
+    mettreAJourResume();
+    mettreAJourRecap();
+    mettreAJourOnglets();
+}
+
+/* ==========================================================
+   RÉSUMÉ DE LA PÉRIODE
+========================================================== */
+function mettreAJourResume() {
+    const cle = etat.periodeActive;
+    if (!cle || !etat.donneesParPeriode[cle]) return;
+    const valides = etat.donneesParPeriode[cle].filter(a => a.delaiJours !== null);
+    const nb      = etat.donneesParPeriode[cle].length;
+    const total   = valides.reduce((s, a) => s + a.delaiJours, 0);
+    const moyenne = valides.length > 0 ? (total / valides.length).toFixed(1) : null;
+    const situation = moyenne !== null
+        ? (parseFloat(moyenne) < 0 ? '✅ Anticipé' : parseFloat(moyenne) <= 30 ? '⚠️ Acceptable' : '🔴 Tardif')
+        : '—';
+
+    document.getElementById('rs-nb').textContent      = nb;
+    document.getElementById('rs-total').textContent   = valides.length > 0 ? total : '—';
+    document.getElementById('rs-moyenne').textContent = moyenne !== null ? moyenne : '—';
+    document.getElementById('rs-situation').textContent = situation;
+    document.getElementById('resume-periode').style.display = nb > 0 ? 'block' : 'none';
+}
+
+/* ==========================================================
+   ONGLETS DE NAVIGATION
+========================================================== */
+function mettreAJourOnglets() {
+    const container = document.getElementById('periodes-tabs');
+    container.innerHTML = '';
+    const cles = Object.keys(etat.donneesParPeriode).sort((a, b) => {
+        const [aA, sA] = a.split('-'), [aB, sB] = b.split('-');
+        return aA !== aB ? parseInt(aA) - parseInt(aB) : sA.localeCompare(sB);
+    });
+    cles.forEach(cle => {
+        const [annee, sem] = cle.split('-');
+        const valides = etat.donneesParPeriode[cle].filter(a => a.delaiJours !== null);
+        const moy = valides.length > 0
+            ? (valides.reduce((s,a) => s + a.delaiJours, 0) / valides.length).toFixed(1)
+            : null;
+        const tab = document.createElement('div');
+        tab.className = `periode-tab ${cle === etat.periodeActive ? 'active' : ''}`;
+        tab.innerHTML = `<span class="dot"></span>${sem} ${annee}${moy !== null ? ` · ${moy > 0 ? '+' : ''}${moy}j` : ''}`;
+        tab.onclick = () => {
+            document.getElementById('select-annee').value    = annee;
+            document.getElementById('select-semestre').value = sem;
+            etat.periodeActive = cle;
+            document.getElementById('zone-saisie').style.display = 'block';
+            document.getElementById('label-periode-btn').textContent = `${sem} ${annee}`;
+            afficherAgentsPeriode(cle);
+            mettreAJourResume();
+            mettreAJourOnglets();
+            mettreAJourInfo(cle);
+        };
+        container.appendChild(tab);
+    });
+}
+
+function mettreAJourInfo(cle) {
+    const agents  = etat.donneesParPeriode[cle] || [];
+    const valides = agents.filter(a => a.delaiJours !== null);
+    const info    = document.getElementById('info-periode');
+    info.textContent = agents.length === 0
+        ? 'Aucun agent saisi'
+        : `${agents.length} agent(s) — ${valides.length} avec délai calculé`;
+}
+
+/* ==========================================================
+   TABLEAU RÉCAPITULATIF GLOBAL
+========================================================== */
+function mettreAJourRecap() {
+    const tbody = document.getElementById('tbody-recap');
+    const tfoot = document.getElementById('tfoot-recap');
+    tbody.innerHTML = tfoot.innerHTML = '';
+    const cles = Object.keys(etat.donneesParPeriode);
+    if (cles.length === 0) { document.getElementById('section-soumettre').style.display = 'none'; return; }
+
+    cles.sort((a, b) => {
+        const [aA, sA] = a.split('-'), [aB, sB] = b.split('-');
+        return aA !== aB ? parseInt(aA) - parseInt(aB) : sA.localeCompare(sB);
+    });
+
+    let grandTotal = 0, grandNb = 0;
+    cles.forEach(cle => {
+        const [annee, sem] = cle.split('-');
+        const valides = etat.donneesParPeriode[cle].filter(a => a.delaiJours !== null);
+        if (valides.length === 0) return;
+        const total   = valides.reduce((s, a) => s + a.delaiJours, 0);
+        const moyenne = (total / valides.length).toFixed(1);
+        const sit     = parseFloat(moyenne) < 0 ? '✅ Anticipé' : parseFloat(moyenne) <= 30 ? '⚠️ Acceptable' : '🔴 Tardif';
+        grandTotal += total; grandNb += valides.length;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${sem} ${annee}</strong></td>
+            <td>${valides.length}</td>
+            <td>${total > 0 ? '+' : ''}${total} jours</td>
+            <td class="td-delai">${parseFloat(moyenne) > 0 ? '+' : ''}${moyenne} j/agent</td>
+            <td>${sit}</td>`;
+        tbody.appendChild(tr);
+    });
+
+    const moyGlobale = grandNb > 0 ? (grandTotal / grandNb).toFixed(1) : '—';
+    const sitGlobale = grandNb > 0 ? (parseFloat(moyGlobale) < 0 ? '✅ Anticipé' : parseFloat(moyGlobale) <= 30 ? '⚠️ Acceptable' : '🔴 Tardif') : '—';
+    tfoot.innerHTML = `<tr class="tr-total"><td>TOTAL GLOBAL</td><td>${grandNb} agents</td><td>${grandTotal > 0 ? '+' : ''}${grandTotal} j</td><td>${parseFloat(moyGlobale) > 0 ? '+' : ''}${moyGlobale} j/agent</td><td>${sitGlobale}</td></tr>`;
+    document.getElementById('section-soumettre').style.display = 'block';
+}
+
+/* ==========================================================
+   SOUMETTRE À L'API
+   Regroupement par année.
+   numerateur   = somme des délais (peut être négatif)
+   denominateur = nombre d'agents
+   → valeur_calculee = délai moyen (peut être négatif)
+========================================================== */
+async function soumettreDonnees() {
+    const btn   = document.getElementById('btn-soumettre');
+    const icon  = document.getElementById('btn-icon');
+    const texte = document.getElementById('btn-texte');
+
+    const cles = Object.keys(etat.donneesParPeriode);
+    if (cles.length === 0) { afficherNotif('Aucune donnée à soumettre.', 'error'); return; }
+
+    btn.disabled = true; icon.innerHTML = '<div class="spinner"></div>';
+    texte.textContent = 'Enregistrement en cours...';
+
+    // Regrouper par année
+    const parAnnee = {};
+    cles.forEach(cle => {
+        const [annee, sem] = cle.split('-');
+        if (!parAnnee[annee]) parAnnee[annee] = [];
+        etat.donneesParPeriode[cle].filter(a => a.delaiJours !== null).forEach(a => {
+            parAnnee[annee].push({ sem, ...a });
+        });
+    });
+
+    const resultats = []; let erreurs = 0;
+
+    for (const annee of Object.keys(parAnnee).sort()) {
+        const agents = parAnnee[annee];
+        if (agents.length === 0) { resultats.push({ annee, statut: 'ignoré' }); continue; }
+        const totalJours = agents.reduce((s, a) => s + a.delaiJours, 0);
+        const nbAgents   = agents.length;
+        const moyenne    = parseFloat((totalJours / nbAgents).toFixed(2));
+        const detail     = Object.keys(etat.donneesParPeriode)
+            .filter(c => c.startsWith(annee))
+            .map(c => {
+                const v = etat.donneesParPeriode[c].filter(a => a.delaiJours !== null);
+                const m = v.length > 0 ? (v.reduce((s,a)=>s+a.delaiJours,0)/v.length).toFixed(1) : '—';
+                const [,s] = c.split('-');
+                return `${s}: ${v.length} agents, moy ${m}j`;
+            }).join(' | ');
+        const commentaire = `${nbAgents} agents — ${detail}`;
+        try {
+            const res = await fetch(`/api/kpis/annuel/update/${etat.kpiId || 1}`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ annee: parseInt(annee), numerateur: totalJours, denominateur: nbAgents, commentaire })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                resultats.push({ annee, nbAgents, totalJours, moyenne, statut: 'success' });
+            } else { resultats.push({ annee, statut: 'erreur', raison: data.error }); erreurs++; }
+        } catch(e) { resultats.push({ annee, statut: 'erreur', raison: e.message }); erreurs++; }
+    }
+
+    btn.disabled = false;
+    icon.textContent  = erreurs === 0 ? '✅' : '⚠️';
+    texte.textContent = erreurs === 0 ? 'Soumis avec succès' : 'Soumis avec des erreurs';
+    afficherResultats(resultats, erreurs);
+}
+
+function afficherResultats(resultats, erreurs) {
+    const section = document.getElementById('section-resultats');
+    section.style.display = 'block';
+    document.getElementById('notif-result').innerHTML = erreurs === 0
+        ? `<div class="notif notif-success">✅ Données enregistrées avec succès.</div>`
+        : `<div class="notif notif-error">⚠️ ${erreurs} erreur(s) lors de l'enregistrement.</div>`;
+
+    const succes  = resultats.filter(r => r.statut === 'success');
+    const totalAg = succes.reduce((s,r) => s + r.nbAgents, 0);
+    const moyGlob = succes.length > 0
+        ? (succes.reduce((s,r) => s + r.totalJours, 0) / totalAg).toFixed(1) : '—';
+
+    document.getElementById('result-cards').innerHTML = `
+        <div class="result-card"><div class="rc-label">Années enregistrées</div><div class="rc-value">${succes.length}</div><div class="rc-unit">années</div></div>
+        <div class="result-card"><div class="rc-label">Total agents</div><div class="rc-value">${totalAg}</div><div class="rc-unit">agents</div></div>
+        <div class="result-card"><div class="rc-label">Délai moyen global</div><div class="rc-value">${parseFloat(moyGlob) > 0 ? '+' : ''}${moyGlob}</div><div class="rc-unit">jours / agent</div></div>
+    `;
+
+    const tbody = document.getElementById('tbody-resultats');
+    tbody.innerHTML = '';
+    resultats.forEach(r => {
+        const tr = document.createElement('tr');
+        const sit = r.moyenne !== undefined
+            ? (r.moyenne < 0 ? '✅ Anticipé' : r.moyenne <= 30 ? '⚠️ Acceptable' : '🔴 Tardif') : '—';
+        if (r.statut === 'success') {
+            tr.innerHTML = `<td><strong>${r.annee}</strong></td><td>${r.nbAgents}</td><td class="td-delai">${r.moyenne > 0 ? '+' : ''}${r.moyenne} j</td><td>${sit}</td><td style="color:#2e7d32;font-weight:600;">✅ Enregistré</td>`;
+        } else if (r.statut === 'ignoré') {
+            tr.innerHTML = `<td><strong>${r.annee}</strong></td><td colspan="3" style="color:#888">Aucune donnée valide</td><td style="color:#888">⏭ Ignoré</td>`;
+        } else {
+            tr.innerHTML = `<td><strong>${r.annee}</strong></td><td colspan="3" style="color:#e53935">${r.raison}</td><td style="color:#e53935">❌ Erreur</td>`;
+        }
+        tbody.appendChild(tr);
+    });
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function afficherNotif(msg, type) {
+    document.getElementById('section-resultats').style.display = 'block';
+    document.getElementById('notif-result').innerHTML = `<div class="notif notif-${type}">${msg}</div>`;
+}
+
+</script>
+{% endblock %}

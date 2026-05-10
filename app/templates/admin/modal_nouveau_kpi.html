@@ -1,0 +1,432 @@
+{# ==========================================================================
+   FICHIER : app/templates/admin/modal_nouveau_kpi.html
+   Include dans dashboard_admin.html avec :  {% include 'admin/modal_nouveau_kpi.html' %}
+   ========================================================================== #}
+
+<!-- ══════════════════════════════════════════════════
+     BOUTON DÉCLENCHEUR (à coller dans ton dashboard_admin.html)
+═══════════════════════════════════════════════════ -->
+{# <button class="btn-nouveau-kpi" onclick="ouvrirModalKpi()">
+    <i class="fas fa-plus-circle"></i> Nouveau KPI
+</button> #}
+
+
+<!-- ══════════════════════════════════════════════════
+     OVERLAY + MODAL
+═══════════════════════════════════════════════════ -->
+<div id="kpiModalOverlay" onclick="if(event.target===this)fermerModalKpi()" style="
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);
+    z-index:1000; align-items:center; justify-content:center;
+    padding:20px; backdrop-filter:blur(3px);">
+
+    <div style="
+        background:#fff; border-radius:18px; width:100%; max-width:780px;
+        max-height:90vh; overflow:hidden; display:flex; flex-direction:column;
+        box-shadow:0 25px 60px rgba(0,0,0,0.25); animation:modalIn .3s ease;">
+
+        <!-- Header modal -->
+        <div style="
+            background:linear-gradient(135deg,#0d2b1f,#1a4a2a);
+            padding:20px 26px; display:flex; align-items:center;
+            justify-content:space-between; flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:12px">
+                <div style="
+                    width:38px;height:38px;background:#ff8c00;border-radius:8px;
+                    display:flex;align-items:center;justify-content:center;font-size:1.1rem;">
+                    📊
+                </div>
+                <div>
+                    <div style="font-size:1rem;font-weight:700;color:#fff" id="kpiModalTitre">Nouveau KPI</div>
+                    <div style="font-size:.72rem;color:rgba(255,255,255,.6)">Création d'un indicateur de performance</div>
+                </div>
+            </div>
+            <button onclick="fermerModalKpi()" style="
+                background:rgba(255,255,255,.12);border:none;color:#fff;
+                width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:1rem;">✕</button>
+        </div>
+
+        <!-- Corps scrollable -->
+        <form id="kpiModalForm" onsubmit="soumettreKpi(event)"
+              style="overflow-y:auto;padding:24px 26px;flex:1">
+
+            <!-- ── Section 1 : Identification ── -->
+            <div class="kpi-form-section">
+                <div class="kfs-title">📌 Identification</div>
+                <div class="kfs-grid">
+                    <div class="kff">
+                        <label>Code <span class="req">*</span></label>
+                        <input type="text" id="kf-code" name="code" required
+                               placeholder="Ex: GT1PKI01"
+                               pattern="[A-Za-z0-9]+" title="Lettres et chiffres uniquement">
+                        <div class="kff-hint">Format : GT1PKI01, GT2PKI05…</div>
+                    </div>
+                    <div class="kff">
+                        <label>Groupe thématique <span class="req">*</span></label>
+                        <select id="kf-groupe" name="groupe_id" required>
+                            <option value="">Chargement…</option>
+                        </select>
+                    </div>
+                    <div class="kff">
+                        <label>Direction concernée <span class="req">*</span></label>
+                        <select id="kf-direction" name="direction">
+                            <option value="">— Sélectionner —</option>
+                            <option value="SGM">SGM — Secrétariat Général</option>
+                            <option value="DSI">DSI — Direction des Systèmes d'Information</option>
+                            <option value="DPAF">DPAF — Direction de la Programmation Financière</option>
+                            <option value="DGT">DGT — Direction Générale du Travail</option>
+                            <option value="DGFP">DGFP — Direction Générale de la Fonction Publique</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Section 2 : Description ── -->
+            <div class="kpi-form-section">
+                <div class="kfs-title">📝 Description</div>
+                <div class="kff" style="grid-column:1/-1">
+                    <label>Intitulé de l'indicateur <span class="req">*</span></label>
+                    <input type="text" id="kf-indicateur" name="indicateur" required
+                           placeholder="Ex: Taux de satisfaction des usagers du ministère">
+                </div>
+                <div class="kfs-grid" style="margin-top:12px">
+                    <div class="kff" style="grid-column:1/-1">
+                        <label>Définition</label>
+                        <textarea id="kf-definition" name="definition" rows="2"
+                                  placeholder="Description précise de ce que mesure l'indicateur"></textarea>
+                    </div>
+                    <div class="kff" style="grid-column:1/-1">
+                        <label>Objectif / Utilité</label>
+                        <textarea id="kf-objectif" name="objectif" rows="2"
+                                  placeholder="À quoi sert cet indicateur ? Quelle décision aide-t-il à prendre ?"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Section 3 : Mode de calcul ── -->
+            <div class="kpi-form-section">
+                <div class="kfs-title">🧮 Mode de calcul</div>
+                <div class="kfs-grid">
+                    <div class="kff">
+                        <label>Type de formule <span class="req">*</span></label>
+                        <select id="kf-formule" name="formule_type" required onchange="majFormule()">
+                            <option value="">— Choisir —</option>
+                            <option value="pourcentage">Pourcentage  (Num ÷ Den × 100)</option>
+                            <option value="moyenne">Moyenne / Délai  (Num ÷ Den)</option>
+                            <option value="somme">Somme / Cumul  (Σ Numérateur)</option>
+                            <option value="nombre">Nombre brut  (valeur directe)</option>
+                            <option value="ratio">Ratio  (Num ÷ Den)</option>
+                            <option value="indice">Indice / Score externe</option>
+                            <option value="tcac">TCAC</option>
+                        </select>
+                    </div>
+                    <div class="kff">
+                        <label>Unité de mesure <span class="req">*</span></label>
+                        <input type="text" id="kf-unite" name="unite" required
+                               placeholder="Ex: %, jours, nombre, …">
+                    </div>
+                    <div class="kff" id="kf-num-wrap">
+                        <label id="kf-num-label">Libellé Numérateur</label>
+                        <input type="text" id="kf-numerateur" name="numerateur_label"
+                               placeholder="Ex: Agents satisfaits">
+                    </div>
+                    <div class="kff" id="kf-den-wrap">
+                        <label id="kf-den-label">Libellé Dénominateur</label>
+                        <input type="text" id="kf-denominateur" name="denominateur_label"
+                               placeholder="Ex: Total agents">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Section 4 : Collecte ── -->
+            <div class="kpi-form-section">
+                <div class="kfs-title">📅 Collecte & Sources</div>
+                <div class="kfs-grid">
+                    <div class="kff">
+                        <label>Fréquence de collecte</label>
+                        <select id="kf-frequence" name="frequence_collecte">
+                            <option value="Annuelle">Annuelle</option>
+                            <option value="Semestrielle">Semestrielle</option>
+                            <option value="Trimestrielle">Trimestrielle</option>
+                            <option value="Mensuelle">Mensuelle</option>
+                            <option value="Ponctuelle">Ponctuelle</option>
+                        </select>
+                    </div>
+                    <div class="kff">
+                        <label>Sources de vérification</label>
+                        <input type="text" id="kf-sources" name="source_verification"
+                               placeholder="Ex: DFP, SIGRH, Rapports FNRB">
+                    </div>
+                    <div class="kff">
+                        <label>Valeur cible 2026</label>
+                        <input type="number" id="kf-cible" name="valeur_cible"
+                               step="any" placeholder="Ex: 80">
+                    </div>
+                    <div class="kff">
+                        <label>Axe stratégique</label>
+                        <input type="text" id="kf-axe" name="axe_strategique"
+                               placeholder="Ex: PAG 1, PAG 2">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Section 5 : Valeurs historiques ── -->
+            <div class="kpi-form-section">
+                <div class="kfs-title">📊 Valeurs connues (optionnel)</div>
+                <p style="font-size:.8rem;color:#888;margin:0 0 14px">
+                    Tu peux pré-remplir les valeurs déjà connues. Elles seront enregistrées en base immédiatement.
+                </p>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px">
+                    {% for annee in range(2016, 2027) %}
+                    <div class="kff">
+                        <label>{{ annee }}</label>
+                        <input type="number" step="any" name="val_{{ annee }}"
+                               id="kf-val-{{ annee }}" placeholder="—">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </form>
+
+        <!-- Pied modal -->
+        <div style="
+            padding:16px 26px; border-top:1px solid #e8edf2; display:flex;
+            justify-content:space-between; align-items:center;
+            background:#f8fafc; flex-shrink:0; gap:12px; flex-wrap:wrap;">
+            <span style="font-size:.75rem;color:#999" id="kpiModalErreur"></span>
+            <div style="display:flex;gap:10px">
+                <button type="button" onclick="fermerModalKpi()" style="
+                    padding:10px 20px;border:1.5px solid #ddd;background:#fff;
+                    border-radius:8px;cursor:pointer;font-size:.85rem;color:#555;">
+                    Annuler
+                </button>
+                <button type="submit" form="kpiModalForm" id="kpiModalSubmit" style="
+                    padding:10px 24px;background:linear-gradient(135deg,#1d6f42,#2e7d32);
+                    color:#fff;border:none;border-radius:8px;cursor:pointer;
+                    font-size:.85rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+                    <span id="kpiSubmitIcon">💾</span>
+                    <span id="kpiSubmitText">Créer le KPI</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Styles ── -->
+<style>
+@keyframes modalIn {
+    from { opacity:0; transform:scale(.96) translateY(-10px); }
+    to   { opacity:1; transform:scale(1) translateY(0); }
+}
+.kpi-form-section {
+    border:1px solid #e8edf2; border-radius:10px;
+    padding:16px 18px; margin-bottom:16px;
+}
+.kfs-title {
+    font-size:.82rem; font-weight:700; color:#1a472a;
+    text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px;
+}
+.kfs-grid {
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px;
+}
+.kff { display:flex; flex-direction:column; gap:5px; }
+.kff label { font-size:.76rem; font-weight:600; color:#555; }
+.kff .req  { color:#ff8c00; }
+.kff-hint  { font-size:.7rem; color:#aaa; }
+.kff input, .kff select, .kff textarea {
+    padding:8px 11px; border:1.5px solid #dde3ec; border-radius:8px;
+    font-size:.84rem; color:#1a1a2e; background:#fafafa;
+    outline:none; transition:border-color .2s, box-shadow .2s;
+    font-family:inherit;
+}
+.kff input:focus, .kff select:focus, .kff textarea:focus {
+    border-color:#1d6f42; background:#fff; box-shadow:0 0 0 3px rgba(29,111,66,.1);
+}
+.kff textarea { resize:vertical; min-height:60px; }
+
+/* Bouton déclencheur admin */
+.btn-nouveau-kpi {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:10px 20px; background:linear-gradient(135deg,#ff8c00,#e67e00);
+    color:#fff; border:none; border-radius:10px; cursor:pointer;
+    font-size:.88rem; font-weight:700; font-family:inherit;
+    box-shadow:0 4px 15px rgba(255,140,0,.3); transition:all .25s;
+}
+.btn-nouveau-kpi:hover {
+    transform:translateY(-2px); box-shadow:0 6px 20px rgba(255,140,0,.4);
+}
+</style>
+
+<!-- ── JS du modal ── -->
+<script>
+/* ── Chargement dynamique des groupes depuis l'API ── */
+(function chargerGroupes() {
+    fetch('/api/groupes')
+        .then(function(r){ return r.json(); })
+        .then(function(groupes) {
+            var sel = document.getElementById('kf-groupe');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">— Sélectionner —</option>';
+            groupes.forEach(function(g) {
+                var opt = document.createElement('option');
+                opt.value = g.id;
+                opt.textContent = g.nom;
+                sel.appendChild(opt);
+            });
+        })
+        .catch(function() {
+            var sel = document.getElementById('kf-groupe');
+            if (sel) sel.innerHTML = '<option value="">Erreur chargement</option>';
+        });
+})();
+
+/* ── Variables d'état ── */
+var kpiEditId = null;  // null = création, int = édition
+
+/* ── Ouvrir pour créer ── */
+function ouvrirModalKpi() {
+    kpiEditId = null;
+    document.getElementById('kpiModalTitre').textContent = 'Nouveau KPI';
+    document.getElementById('kpiSubmitText').textContent = 'Créer le KPI';
+    document.getElementById('kpiModalForm').reset();
+    document.getElementById('kpiModalErreur').textContent = '';
+    document.getElementById('kpiModalOverlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    majFormule();
+}
+
+/* ── Ouvrir pour éditer ── */
+function ouvrirEditionKpi(id) {
+    kpiEditId = id;
+    document.getElementById('kpiModalTitre').textContent = 'Modifier le KPI';
+    document.getElementById('kpiSubmitText').textContent = 'Enregistrer les modifications';
+    document.getElementById('kpiModalErreur').textContent = '';
+
+    fetch('/admin/api/kpis/' + id)
+        .then(r => r.json())
+        .then(k => {
+            document.getElementById('kf-code').value         = k.code || '';
+            document.getElementById('kf-groupe').value       = k.groupe_id || '';
+            document.getElementById('kf-direction').value    = k.direction || '';
+            document.getElementById('kf-indicateur').value   = k.indicateur || '';
+            document.getElementById('kf-definition').value   = k.definition || '';
+            document.getElementById('kf-objectif').value     = k.objectif || '';
+            document.getElementById('kf-formule').value      = k.formule_type || '';
+            document.getElementById('kf-unite').value        = k.unite || '';
+            document.getElementById('kf-numerateur').value   = k.numerateur_label || '';
+            document.getElementById('kf-denominateur').value = k.denominateur_label || '';
+            document.getElementById('kf-frequence').value    = k.frequence_collecte || 'Annuelle';
+            document.getElementById('kf-sources').value      = k.source_verification || '';
+            document.getElementById('kf-cible').value        = k.valeur_cible || '';
+            document.getElementById('kf-axe').value          = k.axe_strategique || '';
+            majFormule();
+        })
+        .catch(() => {
+            document.getElementById('kpiModalErreur').textContent = 'Erreur chargement KPI';
+        });
+
+    document.getElementById('kpiModalOverlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+/* ── Fermer ── */
+function fermerModalKpi() {
+    document.getElementById('kpiModalOverlay').style.display = 'none';
+    document.body.style.overflow = '';
+    kpiEditId = null;
+}
+
+/* Fermer avec Echap */
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') fermerModalKpi();
+});
+
+/* ── Adapter le formulaire selon le type de formule ── */
+function majFormule() {
+    var type = document.getElementById('kf-formule').value;
+    var sansDen = ['somme','nombre','indice','score_externe'];
+    var denWrap = document.getElementById('kf-den-wrap');
+    var numLabel = document.getElementById('kf-num-label');
+    var denLabel = document.getElementById('kf-den-label');
+
+    if (sansDen.includes(type)) {
+        denWrap.style.display = 'none';
+        numLabel.textContent  = 'Valeur / Libellé';
+    } else {
+        denWrap.style.display = '';
+        if (type === 'pourcentage') {
+            numLabel.textContent = 'Libellé Numérateur';
+            denLabel.textContent = 'Libellé Dénominateur (total)';
+        } else if (type === 'moyenne') {
+            numLabel.textContent = 'Libellé Somme (ex: Total jours)';
+            denLabel.textContent = 'Libellé Nb (ex: Nombre d\'agents)';
+        } else {
+            numLabel.textContent = 'Libellé Numérateur';
+            denLabel.textContent = 'Libellé Dénominateur';
+        }
+    }
+}
+
+/* ── Soumettre ── */
+async function soumettreKpi(e) {
+    e.preventDefault();
+    var btn  = document.getElementById('kpiModalSubmit');
+    var icon = document.getElementById('kpiSubmitIcon');
+    var txt  = document.getElementById('kpiSubmitText');
+    var err  = document.getElementById('kpiModalErreur');
+
+    btn.disabled = true;
+    icon.textContent = '⏳';
+    txt.textContent  = 'Enregistrement…';
+    err.textContent  = '';
+
+    /* Collecter le formulaire */
+    var fd = new FormData(document.getElementById('kpiModalForm'));
+    var payload = {};
+    fd.forEach(function(v, k) { payload[k] = v; });
+
+    /* Valeurs annuelles séparées */
+    var valsAnnuelles = {};
+    for (var a = 2016; a <= 2026; a++) {
+        var v = payload['val_' + a];
+        if (v !== undefined && v !== '') valsAnnuelles[a] = parseFloat(v);
+        delete payload['val_' + a];
+    }
+    payload.valeurs_annuelles = valsAnnuelles;
+
+    var url    = kpiEditId ? '/admin/api/kpis/' + kpiEditId : '/admin/api/kpis/create';
+    var method = kpiEditId ? 'PUT' : 'POST';
+
+    try {
+        var res  = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        var data = await res.json();
+
+        if (data.status === 'success') {
+            fermerModalKpi();
+            /* Recharger la liste des KPIs dans l'admin si la fonction existe */
+            if (typeof chargerListeKpis === 'function') chargerListeKpis();
+            /* Toast global */
+            if (window.swalSuccess) {
+                window.swalSuccess(
+                    kpiEditId ? 'KPI modifié' : 'KPI créé',
+                    kpiEditId ? 'Les modifications ont été enregistrées.' : 'Le KPI ' + data.code + ' a été créé. Page accessible sur /kpi/' + data.code.toLowerCase()
+                );
+            } else {
+                alert((kpiEditId ? 'KPI modifié.' : 'KPI créé : ') + (data.code || ''));
+            }
+        } else {
+            err.textContent = '❌ ' + (data.error || 'Erreur inconnue');
+        }
+    } catch(ex) {
+        err.textContent = '❌ Erreur réseau : ' + ex.message;
+    } finally {
+        btn.disabled = false;
+        icon.textContent = '💾';
+        txt.textContent  = kpiEditId ? 'Enregistrer les modifications' : 'Créer le KPI';
+    }
+}
+</script>

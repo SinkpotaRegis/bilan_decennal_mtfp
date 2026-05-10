@@ -1,0 +1,1145 @@
+{% extends "base.html" %}
+
+{% block titre %}GT3PKI05 — Délai moyen de la procédure disciplinaire par instance disciplinaire{% endblock %}
+
+{% block extra_css %}
+
+    <style>
+        /* ===== RESET & BASE ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            color: #1a1a2e;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* ===== EN-TÊTE ===== */
+        .header {
+            background: linear-gradient(135deg, #006633 0%, #008844 100%);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header h1 { font-size: 1.3rem; font-weight: 700; }
+        .header p { font-size: 0.85rem; opacity: 0.9; margin-top: 4px; }
+        .badge-code {
+            background: rgba(255,255,255,0.2);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1rem;
+            letter-spacing: 1px;
+        }
+
+        /* ===== NAVIGATION ===== */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .nav { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .nav a {
+            background: white;
+            padding: 8px 18px;
+            text-decoration: none;
+            border-radius: 8px;
+            color: #006633;
+            font-weight: bold;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+        .nav a:hover, .nav a.active { background: #006633; color: white; }
+
+        /* ===== MENU DÉROULANT "CHOIX DU KPI" ===== */
+        .kpi-dropdown { position: relative; display: inline-block; }
+        .kpi-dropdown-btn {
+            background: white;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 8px;
+            color: #006633;
+            font-weight: bold;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .kpi-dropdown-btn:hover, .kpi-dropdown-btn.ouvert { background: #006633; color: white; }
+        .kpi-dropdown-btn .fleche { font-size: 0.7rem; transition: transform 0.2s; display: inline-block; }
+        .kpi-dropdown-btn.ouvert .fleche { transform: rotate(180deg); }
+        .kpi-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            min-width: 360px;
+            z-index: 9999;
+            overflow: hidden;
+            animation: fadeDown 0.2s ease;
+        }
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .kpi-menu.visible { display: block; }
+        .kpi-menu-header { background: #006633; color: white; padding: 10px 16px; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .kpi-menu-section { padding: 8px 16px 4px; font-size: 0.72rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.6px; background: #f9f9f9; border-bottom: 1px solid #f0f0f0; }
+        .kpi-menu a {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 11px 16px; text-decoration: none; color: #222;
+            font-size: 0.83rem; border-bottom: 1px solid #f5f5f5;
+            transition: background 0.15s; background: white;
+            border-radius: 0; box-shadow: none; font-weight: normal;
+        }
+        .kpi-menu a:hover { background: #e8f5e9; color: #006633; }
+        .kpi-menu a.actif { background: #e8f5e9; border-left: 3px solid #006633; color: #006633; font-weight: 600; }
+        .kpi-menu .code-badge { background: #e8f5e9; color: #006633; font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; white-space: nowrap; margin-top: 2px; flex-shrink: 0; }
+        .kpi-menu a.actif .code-badge { background: #006633; color: white; }
+        .kpi-menu .kpi-intitule { flex: 1; line-height: 1.3; }
+
+        /* ===== FICHE KPI ===== */
+        .fiche-kpi {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #006633;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .fiche-kpi h2 { color: #006633; font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .fiche-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; font-size: 0.85rem; }
+        .fiche-item { display: flex; flex-direction: column; gap: 2px; }
+        .fiche-item label { color: #888; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .fiche-item span { color: #333; font-weight: 500; }
+        .formule-box {
+            background: #f8fdf9;
+            border: 1px dashed #006633;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: #006633;
+            text-align: center;
+        }
+        .formule-box strong { font-size: 0.9rem; }
+
+        /* ===== SECTION SAISIE ===== */
+        .saisie-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .saisie-section h2 {
+            color: #006633;
+            font-size: 1.05rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e8f5e9;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ===== SÉLECTEUR PÉRIODE =====
+           GT3PKI05 est SEMESTRIELLE : on sélectionne l'année et le semestre (S1 ou S2)
+           La clé de l'état sera "2023-S1" ou "2023-S2"
+        ===== */
+        .periode-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .periode-selector label { font-weight: 600; color: #333; font-size: 0.95rem; }
+        .periode-selector select {
+            padding: 10px 16px;
+            border: 2px solid #006633;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: #006633;
+            font-weight: bold;
+            background: white;
+            cursor: pointer;
+            outline: none;
+            min-width: 110px;
+        }
+        .periode-selector select:focus { box-shadow: 0 0 0 3px rgba(0,102,51,0.15); }
+        .periode-separateur { color: #aaa; font-size: 1.2rem; font-weight: 300; }
+
+        /* ===== ONGLETS DES PÉRIODES SAISIES ===== */
+        .periodes-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+        .periode-tab {
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 2px solid #ddd;
+            background: #f5f5f5;
+            color: #888;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .periode-tab.active { background: #006633; color: white; border-color: #006633; }
+        .periode-tab .dot { width: 7px; height: 7px; border-radius: 50%; background: #66bb6a; }
+        .periode-tab.active .dot { background: white; }
+
+        /* ===== ZONE DE SAISIE DES PROCÉDURES ===== */
+        #zone-procedures { display: none; }
+
+        /* ===== CARTE PROCÉDURE ===== */
+        .procedure-card {
+            background: #fafffe;
+            border: 1px solid #c8e6c9;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 16px;
+            position: relative;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .procedure-card .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+        .procedure-card .numero { background: #006633; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; }
+        .procedure-card .titre-card { font-weight: 600; color: #006633; font-size: 0.9rem; flex: 1; margin-left: 10px; }
+        .btn-supprimer { background: none; border: 1px solid #ffcccc; color: #e53935; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; cursor: pointer; transition: all 0.2s; }
+        .btn-supprimer:hover { background: #ffebee; }
+
+        /* ===== GRILLE DE CHAMPS ===== */
+        .fields-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; align-items: end; }
+        .field-group { display: flex; flex-direction: column; gap: 5px; }
+        .field-group label { font-size: 0.78rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.4px; }
+        .field-group input, .field-group select {
+            padding: 9px 12px;
+            border: 1.5px solid #ddd;
+            border-radius: 7px;
+            font-size: 0.88rem;
+            color: #333;
+            outline: none;
+            transition: border-color 0.2s;
+            background: white;
+        }
+        .field-group select { cursor: pointer; }
+        .field-group input:focus, .field-group select:focus { border-color: #006633; box-shadow: 0 0 0 3px rgba(0,102,51,0.1); }
+
+        /* ===== RÉSULTAT CALCULÉ (différence en jours calendaires) ===== */
+        .resultat-diff {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: #e8f5e9;
+            border-radius: 8px;
+            border: 1px solid #a5d6a7;
+            font-size: 0.85rem;
+            color: #2e7d32;
+            font-weight: 600;
+            min-height: 40px;
+        }
+        .resultat-diff .jours-nb { font-size: 1.1rem; font-weight: 800; color: #006633; }
+
+        /* ===== BOUTONS ===== */
+        .btn-ajouter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            color: #006633;
+            border: 2px dashed #006633;
+            padding: 12px 22px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.2s;
+            width: 100%;
+            justify-content: center;
+        }
+        .btn-ajouter:hover { background: #e8f5e9; border-style: solid; }
+
+        /* ===== RÉSUMÉ PAR PÉRIODE ===== */
+        .resume-periode {
+            margin-top: 16px;
+            background: #f0fff4;
+            border: 1px solid #66bb6a;
+            border-radius: 8px;
+            padding: 14px 18px;
+            display: none;
+        }
+        .resume-grid { display: flex; gap: 30px; flex-wrap: wrap; align-items: center; }
+        .resume-stat { display: flex; flex-direction: column; }
+        .rs-label { font-size: 0.75rem; color: #666; text-transform: uppercase; }
+        .rs-value { font-size: 1.4rem; font-weight: 800; color: #006633; }
+        .rs-unit { font-size: 0.75rem; color: #888; }
+
+        /* ===== SECTION SOUMETTRE ===== */
+        .section-soumettre {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: none;
+        }
+        .section-soumettre h2 { color: #006633; font-size: 1.05rem; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid #e8f5e9; }
+
+        /* ===== TABLEAU RÉCAP ===== */
+        .recap-table-wrapper { overflow-x: auto; margin-bottom: 18px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { background: #006633; color: white; padding: 10px 14px; text-align: left; font-weight: 600; }
+        td { padding: 9px 14px; border-bottom: 1px solid #e8f5e9; color: #333; }
+        tr:nth-child(even) td { background: #f8fdf9; }
+        tr:hover td { background: #e8f5e9; }
+        .td-total { font-weight: bold; color: #006633; }
+        tr.tr-total td { background: #e8f5e9; font-weight: bold; color: #006633; border-top: 2px solid #006633; }
+
+        /* ===== BOUTON SOUMETTRE ===== */
+        .btn-soumettre {
+            background: linear-gradient(135deg, #006633, #008844);
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-soumettre:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(0,102,51,0.3); }
+        .btn-soumettre:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        /* ===== RÉSULTATS APRÈS SOUMISSION ===== */
+        #section-resultats {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: none;
+        }
+        #section-resultats h2 { color: #006633; font-size: 1.05rem; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid #e8f5e9; }
+        .result-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .result-card { background: linear-gradient(135deg, #006633, #1b8040); color: white; padding: 18px; border-radius: 10px; text-align: center; }
+        .rc-label { font-size: 0.75rem; opacity: 0.85; margin-bottom: 6px; }
+        .rc-value { font-size: 2rem; font-weight: 800; }
+        .rc-unit { font-size: 0.75rem; opacity: 0.85; margin-top: 2px; }
+
+        /* ===== NOTIFICATIONS ===== */
+        .notif { padding: 14px 18px; border-radius: 8px; margin-bottom: 15px; font-size: 0.88rem; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+        .notif-success { background: #e8f5e9; border: 1px solid #a5d6a7; color: #2e7d32; }
+        .notif-error { background: #ffebee; border: 1px solid #ffcdd2; color: #c62828; }
+
+        /* ===== SPINNER ===== */
+        .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== BADGE SEMESTRIEL ===== */
+        .badge-semestre {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #fff3e0;
+            color: #e65100;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            border: 1px solid #ffcc80;
+            margin-left: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .fields-grid { grid-template-columns: 1fr; }
+            .result-cards { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+{% endblock %}
+</head>
+<body>
+
+
+    <!-- ===== EN-TÊTE ===== -->
+{% block content %}
+    <div class="header">
+        <div>
+            <h1>⚖️ Collecte de données — Délai moyen de la procédure disciplinaire par instance disciplinaire
+                <span class="badge-semestre">📅 Semestriel</span>
+            </h1>
+            <p>Fonction Publique · Suivi des délais de traitement des procédures disciplinaires</p>
+        </div>
+        <div class="badge-code">GT3PKI05</div>
+    </div>
+
+    <!-- ===== FICHE KPI ===== -->
+    <div class="fiche-kpi">
+        <h2>ℹ️ Fiche de l'indicateur</h2>
+        <div class="fiche-grid">
+            <div class="fiche-item">
+                <label>Intitulé</label>
+                <span>Délai moyen de la procédure disciplinaire par instance disciplinaire</span>
+            </div>
+            <div class="fiche-item">
+                <label>Unité de mesure</label>
+                <span>Jours calendaires (valeur moyenne)</span>
+            </div>
+            <div class="fiche-item">
+                <label>Fréquence de collecte</label>
+                <span>Semestrielle</span>
+            </div>
+            <div class="fiche-item">
+                <label>Sources de vérification</label>
+                <span>Registres des instances disciplinaires · Direction des Affaires Juridiques · Rapports DGRH</span>
+            </div>
+        </div>
+        <div class="formule-box">
+            <strong>Formule : </strong>
+            ∑ (Date de la décision définitive − Date de notification à l'agent) ÷ Nombre total de procédures traitées
+        </div>
+    </div>
+
+    <!-- ============================================================
+         SECTION PRINCIPALE DE SAISIE
+         GT3PKI05 : période SEMESTRIELLE — on choisit une année ET un semestre.
+         La clé de stockage sera du type "2023-S1" ou "2023-S2".
+    ============================================================ -->
+    <div class="saisie-section">
+        <h2>✏️ Saisie des procédures disciplinaires par semestre</h2>
+
+        <!-- ÉTAPE 1 : Choisir l'année ET le semestre -->
+        <div class="periode-selector">
+            <label>📅 Année :</label>
+            <select id="select-annee" onchange="changerPeriode()">
+                <option value="">-- Année --</option>
+                <!-- Généré par JS -->
+            </select>
+
+            <span class="periode-separateur">·</span>
+
+            <label>Semestre :</label>
+            <select id="select-semestre" onchange="changerPeriode()">
+                <option value="">-- Semestre --</option>
+                <option value="S1">S1 (Janvier – Juin)</option>
+                <option value="S2">S2 (Juillet – Décembre)</option>
+            </select>
+
+            <!-- Info sur la période sélectionnée -->
+            <span id="info-periode" style="font-size:0.82rem; color:#888;"></span>
+        </div>
+
+        <!-- Onglets des périodes déjà renseignées -->
+        <div class="periodes-tabs" id="periodes-tabs"></div>
+
+        <!-- ZONE QUI APPARAÎT APRÈS CHOIX DE LA PÉRIODE -->
+        <div id="zone-procedures">
+
+            <!-- Les cartes de procédures seront insérées ici -->
+            <div id="liste-procedures"></div>
+
+            <!-- Résumé automatique pour la période en cours -->
+            <div class="resume-periode" id="resume-periode">
+                <div class="resume-grid">
+                    <div class="resume-stat">
+                        <span class="rs-label">Nombre de procédures</span>
+                        <span class="rs-value" id="rs-nb-procedures">0</span>
+                    </div>
+                    <div class="resume-stat">
+                        <span class="rs-label">Total des jours</span>
+                        <span class="rs-value" id="rs-total-jours">0</span>
+                        <span class="rs-unit">jours calendaires cumulés</span>
+                    </div>
+                    <div class="resume-stat">
+                        <span class="rs-label">Délai moyen (cette période)</span>
+                        <span class="rs-value" id="rs-moyenne">—</span>
+                        <span class="rs-unit">jours / procédure</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bouton ajouter -->
+            <button class="btn-ajouter" onclick="ajouterProcedure()">
+                ➕ Ajouter une procédure disciplinaire pour <span id="label-periode-btn"></span>
+            </button>
+
+        </div>
+    </div>
+
+    <!-- ============================================================
+         RÉCAPITULATIF GLOBAL + SOUMETTRE
+    ============================================================ -->
+    <div class="section-soumettre" id="section-soumettre">
+        <h2>📤 Récapitulatif global — Prêt à soumettre</h2>
+        <div class="recap-table-wrapper">
+            <table id="table-recap">
+                <thead>
+                    <tr>
+                        <th>Période</th>
+                        <th>Nb de procédures</th>
+                        <th>Total des jours</th>
+                        <th>Délai moyen (jours calendaires)</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-recap"></tbody>
+                <tfoot id="tfoot-recap"></tfoot>
+            </table>
+        </div>
+        <button class="btn-soumettre" id="btn-soumettre" onclick="soumettreDonnees()">
+            <span id="btn-soumettre-icon">✅</span>
+            <span id="btn-soumettre-texte">Soumettre et enregistrer</span>
+        </button>
+    </div>
+
+    <!-- ============================================================
+         RÉSULTATS APRÈS SOUMISSION
+    ============================================================ -->
+    <div id="section-resultats">
+        <h2>🏆 Résultats enregistrés</h2>
+        <div id="notif-result"></div>
+        <div class="result-cards" id="result-cards"></div>
+        <div class="recap-table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Période</th>
+                        <th>Nb de procédures</th>
+                        <th>Total des jours</th>
+                        <th>Délai moyen</th>
+                        <th>Statut</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-resultats"></tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+
+    /* ==========================================================
+       ÉTAT GLOBAL
+       Structure: donneesParPeriode["2023-S1"] = [
+           { agent, instance, motif, dateNotification, dateDecision, nbJours },
+           ...
+       ]
+    ========================================================== */
+    const etat = {
+        periodeActive: null,        // Ex: "2023-S1"
+        donneesParPeriode: {},      // Toutes les données par période
+        kpiId: null                 // ID du KPI dans la BDD
+    };
+
+    // Instances disciplinaires possibles
+    const instancesDisciplinaires = [
+        "Conseil de Discipline",
+        "Commission Administrative Paritaire (CAP)",
+        "Commission de Discipline Spéciale",
+        "Conseil Supérieur de la Fonction Publique"
+    ];
+
+    // Motifs de procédure (exemples)
+    const motifsProcedure = [
+        "Faute professionnelle",
+        "Manquement aux obligations de service",
+        "Absence irrégulière",
+        "Non-respect des directives hiérarchiques",
+        "Atteinte à la probité",
+        "Violation du secret professionnel",
+        "Insuffisance professionnelle grave",
+        "Abus d'autorité"
+    ];
+
+    /* ==========================================================
+       INITIALISATION
+    ========================================================== */
+    document.addEventListener('DOMContentLoaded', () => {
+        // Remplir le sélecteur d'années (2016 → 2026)
+        const sel = document.getElementById('select-annee');
+        for (let a = 2026; a >= 2016; a--) {
+            const opt = document.createElement('option');
+            opt.value = a;
+            opt.textContent = a;
+            sel.appendChild(opt);
+        }
+        recupererIdKpi();
+        mettreAJourRecap();
+    });
+
+    /* ==========================================================
+       RÉCUPÉRER L'ID DU KPI GT3PKI05 DANS LA BASE
+    ========================================================== */
+    async function recupererIdKpi() {
+        try {
+            const res = await fetch('/api/kpis');
+            const kpis = await res.json();
+            const kpi = kpis.find(k => k.code === 'GT3PKI05');
+            if (kpi) {
+                etat.kpiId = kpi.id;
+                console.log('KPI GT3PKI05 trouvé, ID :', etat.kpiId);
+            } else {
+                console.warn('KPI GT3PKI05 non trouvé dans la base de données.');
+            }
+        } catch (err) {
+            console.error('Erreur récupération KPI:', err);
+        }
+    }
+
+    /* ==========================================================
+       CHANGER DE PÉRIODE
+       Appelé quand on change l'année OU le semestre.
+       La clé de période = "ANNEE-SEMESTRE" ex: "2023-S1"
+    ========================================================== */
+    function changerPeriode() {
+        const annee    = document.getElementById('select-annee').value;
+        const semestre = document.getElementById('select-semestre').value;
+
+        // Les deux doivent être sélectionnés
+        if (!annee || !semestre) {
+            document.getElementById('zone-procedures').style.display = 'none';
+            document.getElementById('info-periode').textContent = '';
+            etat.periodeActive = null;
+            return;
+        }
+
+        // Construire la clé "ANNEE-SEMESTRE"
+        const cle = `${annee}-${semestre}`;
+        etat.periodeActive = cle;
+
+        // Créer la structure pour cette période si elle n'existe pas
+        if (!etat.donneesParPeriode[cle]) {
+            etat.donneesParPeriode[cle] = [];
+        }
+
+        // Afficher la zone de saisie
+        document.getElementById('zone-procedures').style.display = 'block';
+        document.getElementById('label-periode-btn').textContent = `${semestre} ${annee}`;
+
+        // Construire l'affichage
+        afficherProceduresPeriode(cle);
+        mettreAJourResumePeriode();
+        mettreAJourRecap();
+        mettreAJourOnglets();
+        mettreAJourInfoPeriode(cle);
+    }
+
+    /* ==========================================================
+       AFFICHER LES PROCÉDURES D'UNE PÉRIODE
+    ========================================================== */
+    function afficherProceduresPeriode(cle) {
+        const liste = document.getElementById('liste-procedures');
+        liste.innerHTML = '';
+        const procedures = etat.donneesParPeriode[cle] || [];
+
+        if (procedures.length === 0) {
+            ajouterProcedure(); // créer automatiquement la 1ère
+        } else {
+            procedures.forEach((_, i) => creerCarteProcedure(cle, i));
+        }
+    }
+
+    /* ==========================================================
+       AJOUTER UNE NOUVELLE PROCÉDURE
+    ========================================================== */
+    function ajouterProcedure() {
+        if (!etat.periodeActive) return;
+        const cle = etat.periodeActive;
+
+        etat.donneesParPeriode[cle].push({
+            agent: '',                       // Nom/prénom/matricule de l'agent
+            instance: instancesDisciplinaires[0],  // Instance disciplinaire
+            motif: motifsProcedure[0],       // Motif de la procédure
+            dateNotification: '',            // Date de notification à l'agent
+            dateDecision: '',                // Date de la décision définitive
+            nbJours: null                    // Différence calculée (jours calendaires)
+        });
+
+        const index = etat.donneesParPeriode[cle].length - 1;
+        creerCarteProcedure(cle, index);
+        mettreAJourResumePeriode();
+    }
+
+    /* ==========================================================
+       CRÉER UNE CARTE PROCÉDURE DANS LE DOM
+       Champs : agent, instance, motif, date notification, date décision
+    ========================================================== */
+    function creerCarteProcedure(cle, index) {
+        const liste = document.getElementById('liste-procedures');
+        const data  = etat.donneesParPeriode[cle][index];
+        const num   = index + 1;
+
+        // Extraire année et semestre depuis la clé "2023-S1"
+        const [annee, sem] = cle.split('-');
+
+        // Générer les options du select pour l'instance
+        const optionsInstances = instancesDisciplinaires.map(inst => 
+            `<option value="${inst}" ${data.instance === inst ? 'selected' : ''}>${inst}</option>`
+        ).join('');
+
+        // Générer les options du select pour le motif
+        const optionsMotifs = motifsProcedure.map(motif => 
+            `<option value="${motif}" ${data.motif === motif ? 'selected' : ''}>${motif}</option>`
+        ).join('');
+
+        const card = document.createElement('div');
+        card.className = 'procedure-card';
+        card.id = `card-${cle}-${index}`;
+
+        card.innerHTML = `
+            <div class="card-header">
+                <div class="numero">${num}</div>
+                <div class="titre-card">Procédure n°${num} — ${sem} ${annee}</div>
+                ${index > 0
+                    ? `<button class="btn-supprimer" onclick="supprimerProcedure('${cle}', ${index})">✕ Supprimer</button>`
+                    : ''}
+            </div>
+
+            <div class="fields-grid">
+
+                <!-- Champ 1 : Agent concerné -->
+                <div class="field-group" style="grid-column: span 2;">
+                    <label>👤 Agent concerné (Nom / Prénom / Matricule)</label>
+                    <input
+                        type="text"
+                        id="agent-${cle}-${index}"
+                        placeholder="Ex: KOUASSI Jean - MAT-2024-045"
+                        value="${data.agent || ''}"
+                        oninput="mettreAJourChamp('${cle}', ${index}, 'agent', this.value)"
+                    >
+                </div>
+
+                <!-- Champ 2 : Instance disciplinaire -->
+                <div class="field-group">
+                    <label>⚖️ Instance disciplinaire</label>
+                    <select id="instance-${cle}-${index}" onchange="mettreAJourInstance('${cle}', ${index}, this.value)">
+                        ${optionsInstances}
+                    </select>
+                </div>
+
+                <!-- Champ 3 : Motif de la procédure -->
+                <div class="field-group">
+                    <label>📋 Motif de la procédure</label>
+                    <select id="motif-${cle}-${index}" onchange="mettreAJourMotif('${cle}', ${index}, this.value)">
+                        ${optionsMotifs}
+                    </select>
+                </div>
+
+                <!-- Champ 4 : Date de notification à l'agent -->
+                <div class="field-group">
+                    <label>📅 Date de notification à l'agent</label>
+                    <input
+                        type="date"
+                        id="dateNotification-${cle}-${index}"
+                        value="${data.dateNotification || ''}"
+                        onchange="calculerDifference('${cle}', ${index})"
+                    >
+                </div>
+
+                <!-- Champ 5 : Date de la décision définitive -->
+                <div class="field-group">
+                    <label>📜 Date de la décision définitive</label>
+                    <input
+                        type="date"
+                        id="dateDecision-${cle}-${index}"
+                        value="${data.dateDecision || ''}"
+                        onchange="calculerDifference('${cle}', ${index})"
+                    >
+                </div>
+
+                <!-- Champ 6 : Délai calculé automatiquement (jours calendaires) -->
+                <div class="field-group">
+                    <label>⏱ Délai calculé (jours calendaires)</label>
+                    <div class="resultat-diff" id="result-diff-${cle}-${index}">
+                        ${data.nbJours !== null
+                            ? `<span class="jours-nb">${data.nbJours}</span>&nbsp;jours calendaires`
+                            : '<span style="color:#aaa; font-weight:normal">Renseignez les deux dates</span>'
+                        }
+                    </div>
+                </div>
+
+            </div>
+        `;
+
+        liste.appendChild(card);
+    }
+
+    /* ==========================================================
+       METTRE À JOUR L'INSTANCE DISCIPLINAIRE
+    ========================================================== */
+    function mettreAJourInstance(cle, index, valeur) {
+        etat.donneesParPeriode[cle][index].instance = valeur;
+    }
+
+    /* ==========================================================
+       METTRE À JOUR LE MOTIF
+    ========================================================== */
+    function mettreAJourMotif(cle, index, valeur) {
+        etat.donneesParPeriode[cle][index].motif = valeur;
+    }
+
+    /* ==========================================================
+       CALCULER LA DIFFÉRENCE EN JOURS CALENDAIRES
+       Jours calendaires = tous les jours (sans exclusion)
+    ========================================================== */
+    function calculerDifference(cle, index) {
+        const dateNotification = document.getElementById(`dateNotification-${cle}-${index}`).value;
+        const dateDecision     = document.getElementById(`dateDecision-${cle}-${index}`).value;
+        const divResult        = document.getElementById(`result-diff-${cle}-${index}`);
+
+        // Sauvegarder dans l'état
+        etat.donneesParPeriode[cle][index].dateNotification = dateNotification;
+        etat.donneesParPeriode[cle][index].dateDecision     = dateDecision;
+
+        if (dateNotification && dateDecision) {
+            const debut = new Date(dateNotification);
+            const fin   = new Date(dateDecision);
+
+            if (fin < debut) {
+                divResult.innerHTML = `<span style="color:#e53935">⚠️ La date de décision doit être après la notification</span>`;
+                etat.donneesParPeriode[cle][index].nbJours = null;
+            } else {
+                const diffTime = fin - debut;
+                const joursCalendaires = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                divResult.innerHTML = `<span class="jours-nb">${joursCalendaires}</span>&nbsp;jours calendaires`;
+                etat.donneesParPeriode[cle][index].nbJours = joursCalendaires;
+            }
+        } else {
+            divResult.innerHTML = `<span style="color:#aaa; font-weight:normal">Renseignez les deux dates</span>`;
+            etat.donneesParPeriode[cle][index].nbJours = null;
+        }
+
+        mettreAJourResumePeriode();
+        mettreAJourRecap();
+    }
+
+    /* ==========================================================
+       METTRE À JOUR UN CHAMP TEXTE DANS L'ÉTAT
+    ========================================================== */
+    function mettreAJourChamp(cle, index, champ, valeur) {
+        etat.donneesParPeriode[cle][index][champ] = valeur;
+    }
+
+    /* ==========================================================
+       SUPPRIMER UNE PROCÉDURE
+    ========================================================== */
+    function supprimerProcedure(cle, index) {
+        if (!confirm(`Supprimer la procédure n°${index + 1} de la période ${cle} ?`)) return;
+
+        etat.donneesParPeriode[cle].splice(index, 1);
+        if (etat.donneesParPeriode[cle].length === 0) {
+            delete etat.donneesParPeriode[cle];
+        }
+
+        afficherProceduresPeriode(cle);
+        mettreAJourResumePeriode();
+        mettreAJourRecap();
+        mettreAJourOnglets();
+    }
+
+    /* ==========================================================
+       METTRE À JOUR LE RÉSUMÉ DE LA PÉRIODE ACTIVE
+    ========================================================== */
+    function mettreAJourResumePeriode() {
+        const cle = etat.periodeActive;
+        if (!cle || !etat.donneesParPeriode[cle]) return;
+
+        const procedures = etat.donneesParPeriode[cle];
+        const valides    = procedures.filter(p => p.nbJours !== null);
+        const total      = valides.reduce((s, p) => s + p.nbJours, 0);
+        const moyenne    = valides.length > 0 ? (total / valides.length).toFixed(1) : '—';
+
+        document.getElementById('rs-nb-procedures').textContent = procedures.length;
+        document.getElementById('rs-total-jours').textContent = total;
+        document.getElementById('rs-moyenne').textContent = moyenne;
+
+        document.getElementById('resume-periode').style.display =
+            procedures.length > 0 ? 'block' : 'none';
+    }
+
+    /* ==========================================================
+       METTRE À JOUR LES ONGLETS DES PÉRIODES
+    ========================================================== */
+    function mettreAJourOnglets() {
+        const container = document.getElementById('periodes-tabs');
+        container.innerHTML = '';
+
+        const cles = Object.keys(etat.donneesParPeriode).sort((a, b) => {
+            const [anneeA, semA] = a.split('-');
+            const [anneeB, semB] = b.split('-');
+            if (anneeA !== anneeB) return parseInt(anneeA) - parseInt(anneeB);
+            return semA.localeCompare(semB);
+        });
+
+        cles.forEach(cle => {
+            const procedures = etat.donneesParPeriode[cle];
+            const [annee, sem] = cle.split('-');
+            const nomSem = sem === 'S1' ? 'S1 (Janv-Juin)' : 'S2 (Juil-Déc)';
+
+            const tab = document.createElement('div');
+            tab.className = `periode-tab ${cle === etat.periodeActive ? 'active' : ''}`;
+            tab.innerHTML = `<span class="dot"></span>${nomSem} ${annee} (${procedures.length})`;
+            tab.onclick = () => {
+                document.getElementById('select-annee').value = annee;
+                document.getElementById('select-semestre').value = sem;
+                changerPeriode();
+            };
+            container.appendChild(tab);
+        });
+    }
+
+    /* ==========================================================
+       METTRE À JOUR L'INFO SOUS LES SÉLECTEURS
+    ========================================================== */
+    function mettreAJourInfoPeriode(cle) {
+        const info = document.getElementById('info-periode');
+        const procedures = etat.donneesParPeriode[cle] || [];
+        const valides = procedures.filter(p => p.nbJours !== null);
+        info.textContent = procedures.length === 0
+            ? 'Aucune procédure saisie pour cette période'
+            : `${procedures.length} procédure(s) — ${valides.length} avec délai calculé`;
+    }
+
+    /* ==========================================================
+       METTRE À JOUR LE TABLEAU RÉCAPITULATIF GLOBAL
+    ========================================================== */
+    function mettreAJourRecap() {
+        const tbody = document.getElementById('tbody-recap');
+        const tfoot = document.getElementById('tfoot-recap');
+        tbody.innerHTML = '';
+        tfoot.innerHTML = '';
+
+        const cles = Object.keys(etat.donneesParPeriode);
+        if (cles.length === 0) {
+            document.getElementById('section-soumettre').style.display = 'none';
+            return;
+        }
+
+        cles.sort((a, b) => {
+            const [anneeA, semA] = a.split('-');
+            const [anneeB, semB] = b.split('-');
+            if (anneeA !== anneeB) return parseInt(anneeA) - parseInt(anneeB);
+            return semA.localeCompare(semB);
+        });
+
+        let grandTotalJours = 0;
+        let grandTotalProcedures = 0;
+
+        cles.forEach(cle => {
+            const procedures = etat.donneesParPeriode[cle];
+            const valides    = procedures.filter(p => p.nbJours !== null);
+            const total      = valides.reduce((s, p) => s + p.nbJours, 0);
+            const moyenne    = valides.length > 0 ? (total / valides.length).toFixed(1) : '—';
+            const [annee, sem] = cle.split('-');
+            const affichage = sem === 'S1' ? `${sem} (Janv-Juin)` : `${sem} (Juil-Déc)`;
+
+            grandTotalJours    += total;
+            grandTotalProcedures += valides.length;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${affichage} ${annee}</strong></td>
+                <td>${procedures.length} (${valides.length} calculés)</td>
+                <td>${total} jours</th>
+                <td class="td-total">${moyenne} j/procédure</th>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        const moyGlobale = grandTotalProcedures > 0
+            ? (grandTotalJours / grandTotalProcedures).toFixed(1) : '—';
+
+        tfoot.innerHTML = `
+            <tr class="tr-total">
+                <td><strong>TOTAL GLOBAL</strong></th>
+                <td><strong>${grandTotalProcedures} procédures</strong></th>
+                <td><strong>${grandTotalJours} jours</strong></th>
+                <td><strong>${moyGlobale} j/procédure</strong></th>
+            </tr>`;
+
+        document.getElementById('section-soumettre').style.display = 'block';
+    }
+
+    /* ==========================================================
+       SOUMETTRE LES DONNÉES À L'API FLASK
+       Pour chaque période, on envoie le total des jours et le nombre de procédures
+    ========================================================== */
+    async function soumettreDonnees() {
+        const btn   = document.getElementById('btn-soumettre');
+        const icon  = document.getElementById('btn-soumettre-icon');
+        const texte = document.getElementById('btn-soumettre-texte');
+
+        const cles = Object.keys(etat.donneesParPeriode);
+        if (cles.length === 0) {
+            afficherNotif('Aucune donnée à soumettre.', 'error');
+            return;
+        }
+
+        btn.disabled = true;
+        icon.innerHTML = '<div class="spinner"></div>';
+        texte.textContent = 'Enregistrement en cours...';
+
+        const resultats = [];
+        let erreurs = 0;
+
+        for (const cle of cles) {
+            const procedures = etat.donneesParPeriode[cle];
+            const valides    = procedures.filter(p => p.nbJours !== null);
+            
+            if (valides.length === 0) {
+                resultats.push({ periode: cle, statut: 'ignoré', raison: 'Aucun délai calculé' });
+                continue;
+            }
+
+            const totalJours = valides.reduce((s, p) => s + p.nbJours, 0);
+            const nbProcedures = valides.length;
+            const moyenneJours = parseFloat((totalJours / nbProcedures).toFixed(2));
+
+            // Détail des instances et motifs pour le commentaire
+            const instancesCount = {};
+            const motifsCount = {};
+            valides.forEach(p => {
+                instancesCount[p.instance] = (instancesCount[p.instance] || 0) + 1;
+                motifsCount[p.motif] = (motifsCount[p.motif] || 0) + 1;
+            });
+            const commentaire = `${nbProcedures} procédures - Instances: ${Object.entries(instancesCount).map(([i,c]) => `${i}: ${c}`).join(', ')} - Motifs: ${Object.entries(motifsCount).map(([m,c]) => `${m}: ${c}`).join(', ')}`;
+
+            try {
+                const response = await fetch(`/api/kpis/semestriel/update/${etat.kpiId || 1}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        periode:      cle,           // ex: "2023-S1"
+                        numerateur:   totalJours,    // ∑ jours calendaires
+                        denominateur: nbProcedures,  // nombre de procédures
+                        commentaire:  commentaire
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    resultats.push({ periode: cle, nbProcedures, totalJours, moyenneJours, statut: 'success' });
+                } else {
+                    resultats.push({ periode: cle, statut: 'erreur', raison: data.error });
+                    erreurs++;
+                }
+            } catch (err) {
+                resultats.push({ periode: cle, statut: 'erreur', raison: err.message });
+                erreurs++;
+            }
+        }
+
+        btn.disabled = false;
+        icon.textContent = erreurs === 0 ? '✅' : '⚠️';
+        texte.textContent = erreurs === 0 ? 'Soumis avec succès' : 'Soumis avec des erreurs';
+        afficherResultats(resultats, erreurs);
+    }
+
+    /* ==========================================================
+       AFFICHER LES RÉSULTATS APRÈS SOUMISSION
+    ========================================================== */
+    function afficherResultats(resultats, erreurs) {
+        const section = document.getElementById('section-resultats');
+        section.style.display = 'block';
+
+        document.getElementById('notif-result').innerHTML = erreurs === 0
+            ? `<div class="notif notif-success">✅ Données enregistrées avec succès. Visibles dans la page de collecte.</div>`
+            : `<div class="notif notif-error">⚠️ ${erreurs} erreur(s) lors de l'enregistrement.</div>`;
+
+        const succes = resultats.filter(r => r.statut === 'success');
+        const totProcedures = succes.reduce((s,r) => s + r.nbProcedures, 0);
+        const totJours    = succes.reduce((s,r) => s + r.totalJours, 0);
+        const moyGlobale  = totProcedures > 0 ? (totJours/totProcedures).toFixed(1) : '—';
+
+        document.getElementById('result-cards').innerHTML = `
+            <div class="result-card"><div class="rc-label">Périodes enregistrées</div><div class="rc-value">${succes.length}</div><div class="rc-unit">semestres</div></div>
+            <div class="result-card"><div class="rc-label">Total procédures</div><div class="rc-value">${totProcedures}</div><div class="rc-unit">procédures</div></div>
+            <div class="result-card"><div class="rc-label">Total jours cumulés</div><div class="rc-value">${totJours}</div><div class="rc-unit">jours calendaires</div></div>
+            <div class="result-card"><div class="rc-label">Délai moyen global</div><div class="rc-value">${moyGlobale}</div><div class="rc-unit">j / procédure</div></div>
+        `;
+
+        const tbody = document.getElementById('tbody-resultats');
+        tbody.innerHTML = '';
+        resultats.forEach(r => {
+            const tr = document.createElement('tr');
+            if (r.statut === 'success') {
+                tr.innerHTML = `<td><strong>${r.periode}</strong></td><td>${r.nbProcedures}</th>
+                <td>${r.totalJours} j</th>
+                <td class="td-total">${r.moyenneJours} j</th>
+                <td style="color:#2e7d32;font-weight:600;">✅ Enregistré</th>`;
+            } else if (r.statut === 'ignoré') {
+                tr.innerHTML = `<td><strong>${r.periode}</strong></td><td colspan="3" style="color:#888">${r.raison}</td><td style="color:#888">⏭ Ignoré</th>`;
+            } else {
+                tr.innerHTML = `<td><strong>${r.periode}</strong></td><td colspan="3" style="color:#e53935">${r.raison}</td><td style="color:#e53935">❌ Erreur</th>`;
+            }
+            tbody.appendChild(tr);
+        });
+
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    /* ==========================================================
+       UTILITAIRE : afficher une notification
+    ========================================================== */
+    function afficherNotif(message, type) {
+        document.getElementById('section-resultats').style.display = 'block';
+        document.getElementById('notif-result').innerHTML =
+            `<div class="notif notif-${type}">${message}</div>`;
+    }
+
+    /* ==========================================================
+       MENU DÉROULANT KPI
+    ========================================================== */
+    function basculerMenuKpi(event) {
+        event.stopPropagation();
+        const menu = document.getElementById('kpi-menu');
+        const btn  = document.getElementById('kpi-dropdown-btn');
+        const ouvert = menu.classList.contains('visible');
+        menu.classList.toggle('visible', !ouvert);
+        btn.classList.toggle('ouvert', !ouvert);
+    }
+    document.addEventListener('click', function(e) {
+        const dd = document.getElementById('kpi-dropdown');
+        if (dd && !dd.contains(e.target)) {
+            document.getElementById('kpi-menu').classList.remove('visible');
+            document.getElementById('kpi-dropdown-btn').classList.remove('ouvert');
+        }
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.getElementById('kpi-menu').classList.remove('visible');
+            document.getElementById('kpi-dropdown-btn').classList.remove('ouvert');
+        }
+    });
+
+    </script>
+{% endblock %}
+</body>
+</html>

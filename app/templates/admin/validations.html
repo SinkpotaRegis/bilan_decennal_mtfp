@@ -1,0 +1,685 @@
+{% extends "admin_base.html" %}
+
+{% block titre %}Validation des données — Admin MTFP{% endblock %}
+{% block page_title %}Validation des données KPI{% endblock %}
+{% block page_subtitle %}Examiner, valider ou relancer les soumissions des collecteurs{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Stats ── */
+.val-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 22px;
+}
+.val-stat {
+    background: white;
+    border-radius: 12px;
+    padding: 15px 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border-left: 4px solid #ddd;
+    cursor: pointer;
+    transition: all .2s;
+}
+.val-stat:hover { transform: translateY(-2px); box-shadow: 0 5px 16px rgba(0,0,0,0.1); }
+.val-stat.active { border-left-width: 5px; box-shadow: 0 5px 16px rgba(0,0,0,0.12); }
+.val-stat.s-attente { border-left-color: #ff8c00; }
+.val-stat.s-attente.active { background: #fff9f0; }
+.val-stat.s-valide  { border-left-color: #2e7d32; }
+.val-stat.s-valide.active  { background: #f1f8f1; }
+.val-stat.s-relance { border-left-color: #1e88e5; }
+.val-stat.s-relance.active { background: #f0f6ff; }
+.val-stat.s-annule  { border-left-color: #e53935; }
+.val-stat.s-annule.active  { background: #fff5f5; }
+.val-stat.s-tous    { border-left-color: #555; }
+.val-stat.s-tous.active    { background: #f5f5f5; }
+.val-stat-val { font-size: 1.8rem; font-weight: 800; color: #1a1a2e; line-height: 1; }
+.val-stat-lbl { font-size: 0.72rem; color: #888; font-weight: 500; margin-top: 4px; }
+
+/* ── Filtres ── */
+.val-filtres {
+    background: white;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.val-filtres input, .val-filtres select {
+    padding: 8px 12px;
+    border: 1.5px solid #dde3ec;
+    border-radius: 8px;
+    font-size: 0.84rem;
+    outline: none;
+    font-family: 'Inter', sans-serif;
+    transition: border-color .2s;
+    background: #fafafa;
+}
+.val-filtres input:focus, .val-filtres select:focus {
+    border-color: #1d6f42;
+    background: white;
+}
+.val-search { position: relative; }
+.val-search i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #bbb; font-size: 12px; }
+.val-search input { padding-left: 30px; width: 220px; }
+.btn-reset-filtre {
+    padding: 8px 14px;
+    background: #f5f5f5;
+    border: 1.5px solid #dde3ec;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    color: #666;
+    font-family: 'Inter', sans-serif;
+    transition: all .2s;
+}
+.btn-reset-filtre:hover { background: #eee; }
+
+/* ── Actions groupées ── */
+.val-actions-group {
+    display: none;
+    background: #fff9f0;
+    border: 1.5px solid #ff8c00;
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin-bottom: 14px;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.val-actions-group.visible { display: flex; }
+.val-sel-count {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #e65100;
+}
+.btn-grp {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border: none; border-radius: 7px;
+    font-size: 0.8rem; font-weight: 700; cursor: pointer;
+    font-family: 'Inter', sans-serif; transition: all .2s;
+}
+.btn-grp-valider  { background: #e8f5e9; color: #2e7d32; border: 1.5px solid #a5d6a7; }
+.btn-grp-relancer { background: #e3f2fd; color: #1565c0; border: 1.5px solid #90caf9; }
+.btn-grp-annuler  { background: #ffebee; color: #c62828; border: 1.5px solid #ffcdd2; }
+.btn-grp:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,0.12); }
+
+/* ── Table ── */
+.val-table-wrap {
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+.val-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.83rem;
+}
+.val-table thead th {
+    background: #0d2b1f;
+    color: white;
+    padding: 12px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    white-space: nowrap;
+}
+.val-table thead th:first-child { width: 38px; text-align: center; }
+.val-table tbody tr { border-bottom: 1px solid #f0f4f0; transition: background .15s; }
+.val-table tbody tr:hover { background: #fafdf8; }
+.val-table tbody tr.selected { background: #f0f7f2; }
+.val-table td { padding: 11px 14px; vertical-align: middle; }
+.val-table td:first-child { text-align: center; }
+
+.td-code {
+    font-weight: 800;
+    font-size: 0.75rem;
+    color: #0d2b1f;
+    background: #e8f5e9;
+    padding: 3px 9px;
+    border-radius: 12px;
+    white-space: nowrap;
+}
+.td-intitule { max-width: 220px; line-height: 1.4; color: #1a2e1a; font-weight: 500; }
+.td-valeur { font-weight: 700; color: #1d6f42; white-space: nowrap; }
+.td-taux { white-space: nowrap; }
+.taux-bar-wrap { display: flex; align-items: center; gap: 8px; }
+.taux-bar-bg { flex: 1; height: 5px; background: #e8f5e9; border-radius: 3px; min-width: 60px; }
+.taux-bar-fg { height: 100%; border-radius: 3px; transition: width .5s; }
+.td-collecteur { font-size: 0.78rem; color: #666; }
+.td-preuves { text-align: center; }
+.badge-preuve {
+    background: #e8f5e9; color: #2e7d32;
+    font-size: 0.68rem; font-weight: 700;
+    padding: 2px 7px; border-radius: 10px;
+}
+
+/* Badges statut */
+.badge-statut {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 20px; font-size: 0.73rem; font-weight: 700;
+    white-space: nowrap;
+}
+.badge-en_attente { background: #fff3e0; color: #e65100; }
+.badge-valide     { background: #e8f5e9; color: #2e7d32; }
+.badge-relance    { background: #e3f2fd; color: #1565c0; }
+.badge-annule     { background: #ffebee; color: #c62828; }
+
+/* Actions ligne */
+.td-actions { white-space: nowrap; }
+.btn-val-action {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border: none; border-radius: 6px;
+    font-size: 0.75rem; font-weight: 700; cursor: pointer;
+    font-family: 'Inter', sans-serif; transition: all .15s; margin-right: 4px;
+}
+.btn-val-action:last-child { margin-right: 0; }
+.btn-valider  { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+.btn-relancer { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+.btn-annuler  { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+.btn-val-action:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.btn-val-action:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.btn-voir { background: #f0f4f0; color: #444; border: 1px solid #dde3ec; }
+
+/* Chargement / vide */
+.val-loading, .val-vide {
+    text-align: center; padding: 50px 20px;
+    background: white; border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    color: #888; font-size: 0.9rem;
+}
+.val-vide { border: 2px dashed #dde3ec; }
+
+/* Modal validation */
+.modal-val-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 2000;
+    align-items: center; justify-content: center;
+    padding: 20px; backdrop-filter: blur(3px);
+}
+.modal-val-overlay.open { display: flex; }
+.modal-val-box {
+    background: white; border-radius: 18px;
+    width: 100%; max-width: 520px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+    animation: popIn .3s ease;
+    overflow: hidden;
+}
+@keyframes popIn {
+    from { opacity:0; transform: scale(.95) translateY(-10px); }
+    to   { opacity:1; transform: scale(1) translateY(0); }
+}
+.modal-val-header {
+    padding: 18px 22px; display: flex; align-items: center;
+    justify-content: space-between;
+}
+.modal-val-header.valider  { background: linear-gradient(135deg,#1b5e20,#2e7d32); }
+.modal-val-header.relancer { background: linear-gradient(135deg,#0d47a1,#1565c0); }
+.modal-val-header.annuler  { background: linear-gradient(135deg,#b71c1c,#c62828); }
+.modal-val-header h3 { color: white; font-size: 1rem; font-weight: 700; margin: 0; }
+.modal-val-close {
+    background: rgba(255,255,255,.15); border: none; color: white;
+    width: 30px; height: 30px; border-radius: 7px;
+    cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center;
+}
+.modal-val-body { padding: 22px; }
+.modal-val-info {
+    background: #f8fafc; border-radius: 10px; padding: 14px;
+    margin-bottom: 16px; font-size: 0.83rem;
+}
+.modal-val-info strong { color: #1d6f42; }
+.modal-val-body label {
+    display: block; font-size: 0.78rem; font-weight: 700;
+    color: #555; margin-bottom: 6px;
+}
+.modal-val-body textarea {
+    width: 100%; padding: 10px 12px; border: 1.5px solid #dde3ec;
+    border-radius: 9px; font-size: 0.85rem; font-family: 'Inter', sans-serif;
+    resize: vertical; min-height: 90px; outline: none;
+    transition: border-color .2s;
+}
+.modal-val-body textarea:focus { border-color: #1d6f42; }
+.modal-val-footer {
+    padding: 14px 22px; border-top: 1px solid #f0f4f0;
+    display: flex; justify-content: flex-end; gap: 10px;
+    background: #f8fafc;
+}
+.btn-modal-cancel {
+    padding: 9px 18px; border: 1.5px solid #ddd; background: white;
+    border-radius: 8px; cursor: pointer; font-size: 0.84rem; color: #555;
+    font-family: 'Inter', sans-serif;
+}
+.btn-modal-confirm {
+    padding: 9px 22px; border: none; border-radius: 8px;
+    cursor: pointer; font-size: 0.84rem; font-weight: 700;
+    color: white; font-family: 'Inter', sans-serif; transition: all .2s;
+}
+.btn-modal-confirm.valider  { background: #2e7d32; }
+.btn-modal-confirm.relancer { background: #1565c0; }
+.btn-modal-confirm.annuler  { background: #c62828; }
+.btn-modal-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+.modal-val-err { color: #c62828; font-size: 0.78rem; margin-top: 6px; }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<!-- Stats cliquables -->
+<div class="val-stats" id="valStats">
+    <div class="val-stat s-attente active" onclick="changerFiltreStatut('en_attente', this)">
+        <div class="val-stat-val" id="sn-attente">—</div>
+        <div class="val-stat-lbl">⏳ En attente</div>
+    </div>
+    <div class="val-stat s-valide" onclick="changerFiltreStatut('valide', this)">
+        <div class="val-stat-val" id="sn-valide">—</div>
+        <div class="val-stat-lbl">✅ Validés</div>
+    </div>
+    <div class="val-stat s-relance" onclick="changerFiltreStatut('relance', this)">
+        <div class="val-stat-val" id="sn-relance">—</div>
+        <div class="val-stat-lbl">🔁 Relancés</div>
+    </div>
+    <div class="val-stat s-annule" onclick="changerFiltreStatut('annule', this)">
+        <div class="val-stat-val" id="sn-annule">—</div>
+        <div class="val-stat-lbl">❌ Annulés</div>
+    </div>
+    <div class="val-stat s-tous" onclick="changerFiltreStatut('tous', this)">
+        <div class="val-stat-val" id="sn-tous">—</div>
+        <div class="val-stat-lbl">📊 Total</div>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="val-filtres">
+    <div class="val-search">
+        <i class="fas fa-search"></i>
+        <input type="text" id="valSearch" placeholder="Code ou intitulé…" oninput="appliquerFiltres()">
+    </div>
+    <select id="valGroupe" onchange="appliquerFiltres()">
+        <option value="">Tous les groupes</option>
+        <option value="Gouvernance">GT1 — Gouvernance</option>
+        <option value="Travail">GT2 — Travail</option>
+        <option value="Fonction">GT3 — Fonction Publique</option>
+    </select>
+    <select id="valAnnee" onchange="appliquerFiltres()">
+        <option value="">Toutes les années</option>
+        {% for a in range(2016, 2027) %}
+        <option value="{{ a }}">{{ a }}</option>
+        {% endfor %}
+    </select>
+    <button class="btn-reset-filtre" onclick="resetFiltres()">
+        <i class="fas fa-times"></i> Réinitialiser
+    </button>
+    <span style="margin-left:auto;font-size:.78rem;color:#888" id="valCompteur"></span>
+</div>
+
+<!-- Actions groupées -->
+<div class="val-actions-group" id="valActionsGroup">
+    <span class="val-sel-count" id="valSelCount">0 sélectionné(s)</span>
+    <button class="btn-grp btn-grp-valider"  onclick="actionGroupe('valider')">
+        <i class="fas fa-check-double"></i> Tout valider
+    </button>
+    <button class="btn-grp btn-grp-relancer" onclick="actionGroupe('relancer')">
+        <i class="fas fa-redo"></i> Tout relancer
+    </button>
+    <button class="btn-grp btn-grp-annuler"  onclick="actionGroupe('annuler')">
+        <i class="fas fa-ban"></i> Tout annuler
+    </button>
+    <button class="btn-grp" style="background:#f5f5f5;color:#555;border:1.5px solid #ddd" onclick="toutDeselectionner()">
+        <i class="fas fa-times"></i> Désélectionner
+    </button>
+</div>
+
+<!-- Chargement -->
+<div class="val-loading" id="valLoading">
+    <i class="fas fa-spinner fa-spin" style="font-size:1.6rem;color:#1d6f42;display:block;margin-bottom:12px"></i>
+    Chargement des soumissions…
+</div>
+
+<!-- Table -->
+<div class="val-table-wrap" id="valTableWrap" style="display:none">
+    <table class="val-table">
+        <thead>
+            <tr>
+                <th>
+                    <input type="checkbox" id="checkAll" onchange="toggleTout(this)"
+                           style="cursor:pointer;width:15px;height:15px">
+                </th>
+                <th>Code KPI</th>
+                <th>Indicateur</th>
+                <th>Groupe</th>
+                <th>Année</th>
+                <th>Valeur saisie</th>
+                <th>Progression</th>
+                <th>Collecteur</th>
+                <th>Preuves</th>
+                <th>Statut</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="valTableBody"></tbody>
+    </table>
+</div>
+
+<!-- Vide -->
+<div class="val-vide" id="valVide" style="display:none">
+    <div style="font-size:2rem;margin-bottom:10px">📭</div>
+    <div style="font-weight:700;color:#1a2e1a;margin-bottom:6px">Aucune soumission trouvée</div>
+    <div style="font-size:0.82rem;color:#888">Modifiez les filtres ou attendez de nouvelles soumissions.</div>
+</div>
+
+<!-- Modal confirmation action -->
+<div class="modal-val-overlay" id="modalValOverlay">
+    <div class="modal-val-box">
+        <div class="modal-val-header" id="modalValHeader">
+            <h3 id="modalValTitre">Confirmer l'action</h3>
+            <button class="modal-val-close" onclick="fermerModalVal()">✕</button>
+        </div>
+        <div class="modal-val-body">
+            <div class="modal-val-info" id="modalValInfo"></div>
+            <label>Commentaire / Note <span style="color:#ff8c00">*</span></label>
+            <textarea id="modalValNote" placeholder="Expliquez votre décision (obligatoire)…"></textarea>
+            <div class="modal-val-err" id="modalValErr"></div>
+        </div>
+        <div class="modal-val-footer">
+            <button class="btn-modal-cancel" onclick="fermerModalVal()">Annuler</button>
+            <button class="btn-modal-confirm" id="modalValConfirm" onclick="confirmerAction()">
+                <span id="modalValConfirmTxt">Confirmer</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+var tousItems    = [];    // toutes les soumissions chargées
+var filtreStatut = 'en_attente';
+var itemsAffiches = [];
+var idsSelectionnes = new Set();
+
+/* Action en cours (pour le modal) */
+var actionEnCours  = null;   // { action, ka_id, est_groupe }
+var idsGroupeEnCours = [];
+
+/* ════ INIT ════ */
+document.addEventListener('DOMContentLoaded', function () {
+    chargerTout();
+});
+
+/* ════ CHARGEMENT ════ */
+async function chargerTout() {
+    document.getElementById('valLoading').style.display  = 'block';
+    document.getElementById('valTableWrap').style.display = 'none';
+    document.getElementById('valVide').style.display      = 'none';
+
+    try {
+        /* On charge tout (sans filtre statut côté serveur) pour avoir les stats */
+        var r    = await fetch('/api/admin/validations/liste?statut=tous');
+        var data = await r.json();
+        tousItems = data.items || [];
+
+        /* Mettre à jour les stats */
+        var s = data.stats || {};
+        var total = tousItems.length;
+        document.getElementById('sn-attente').textContent = s.en_attente || 0;
+        document.getElementById('sn-valide').textContent  = s.valide     || 0;
+        document.getElementById('sn-relance').textContent = s.relance    || 0;
+        document.getElementById('sn-annule').textContent  = s.annule     || 0;
+        document.getElementById('sn-tous').textContent    = total;
+
+        appliquerFiltres();
+    } catch(e) {
+        document.getElementById('valLoading').innerHTML =
+            '<i class="fas fa-exclamation-triangle" style="color:#e53935;font-size:1.4rem;display:block;margin-bottom:10px"></i>'
+            + 'Erreur : ' + e.message;
+    }
+}
+
+/* ════ FILTRES ════ */
+function changerFiltreStatut(statut, el) {
+    filtreStatut = statut;
+    document.querySelectorAll('.val-stat').forEach(function(s){ s.classList.remove('active'); });
+    el.classList.add('active');
+    idsSelectionnes.clear();
+    majActionsGroupe();
+    appliquerFiltres();
+}
+
+function appliquerFiltres() {
+    var q      = (document.getElementById('valSearch').value || '').toLowerCase().trim();
+    var groupe = (document.getElementById('valGroupe').value || '').toLowerCase();
+    var annee  = document.getElementById('valAnnee').value || '';
+
+    itemsAffiches = tousItems.filter(function(item) {
+        if (filtreStatut !== 'tous' && item.statut !== filtreStatut) return false;
+        if (q && !item.kpi_code.toLowerCase().includes(q) && !item.kpi_intitule.toLowerCase().includes(q)) return false;
+        if (groupe && !item.groupe.toLowerCase().includes(groupe)) return false;
+        if (annee && String(item.annee) !== annee) return false;
+        return true;
+    });
+
+    document.getElementById('valCompteur').textContent = itemsAffiches.length + ' résultat(s)';
+    afficher(itemsAffiches);
+}
+
+function resetFiltres() {
+    document.getElementById('valSearch').value = '';
+    document.getElementById('valGroupe').value = '';
+    document.getElementById('valAnnee').value  = '';
+    appliquerFiltres();
+}
+
+/* ════ AFFICHAGE ════ */
+function afficher(liste) {
+    document.getElementById('valLoading').style.display   = 'none';
+    var wrap = document.getElementById('valTableWrap');
+    var vide = document.getElementById('valVide');
+    var body = document.getElementById('valTableBody');
+
+    if (!liste.length) {
+        wrap.style.display = 'none';
+        vide.style.display = 'block';
+        return;
+    }
+    vide.style.display = 'none';
+    wrap.style.display = 'block';
+    body.innerHTML = '';
+
+    liste.forEach(function(item) {
+        var statut = item.statut || 'en_attente';
+        var checked = idsSelectionnes.has(item.ka_id) ? 'checked' : '';
+        var selected = idsSelectionnes.has(item.ka_id) ? ' selected' : '';
+        var valAff = item.valeur !== null && item.valeur !== undefined
+            ? item.valeur + ' ' + item.unite : '<span style="color:#ccc">—</span>';
+        var taux = item.taux_atteinte || 0;
+        var tausCouleur = taux >= 80 ? '#2e7d32' : taux >= 50 ? '#ff8c00' : '#e53935';
+        var preuveBadge = item.nb_preuves > 0
+            ? '<span class="badge-preuve">📎 ' + item.nb_preuves + '</span>'
+            : '<span style="color:#ccc;font-size:.75rem">—</span>';
+
+        /* Boutons selon statut */
+        var btns = '';
+        if (statut === 'en_attente' || statut === 'relance') {
+            btns += '<button class="btn-val-action btn-valider" onclick="ouvrirModalVal(' + item.ka_id + ',\'valider\',\'' + escHtml(item.kpi_code) + '\',' + item.annee + ')"><i class="fas fa-check"></i> Valider</button>';
+            if (statut === 'en_attente') {
+                btns += '<button class="btn-val-action btn-relancer" onclick="ouvrirModalVal(' + item.ka_id + ',\'relancer\',\'' + escHtml(item.kpi_code) + '\',' + item.annee + ')"><i class="fas fa-redo"></i> Relancer</button>';
+            }
+            btns += '<button class="btn-val-action btn-annuler" onclick="ouvrirModalVal(' + item.ka_id + ',\'annuler\',\'' + escHtml(item.kpi_code) + '\',' + item.annee + ')"><i class="fas fa-ban"></i> Annuler</button>';
+        } else {
+            btns = '<span style="font-size:.75rem;color:#888">' + (statut === 'valide' ? '✅ Traité' : statut === 'annule' ? '❌ Annulé' : '—') + '</span>';
+        }
+        btns += ' <a href="' + item.url_kpi + '" target="_blank" class="btn-val-action btn-voir"><i class="fas fa-eye"></i></a>';
+
+        /* Infos collecteur + commentaire */
+        var collecteurInfo = item.collecteur;
+        if (item.note_validateur) {
+            collecteurInfo += '<br><span style="font-size:.7rem;color:#888;font-style:italic">💬 ' + escHtml(item.note_validateur) + '</span>';
+        }
+
+        var tr = document.createElement('tr');
+        tr.dataset.id = item.ka_id;
+        tr.className = selected;
+        tr.innerHTML =
+            '<td><input type="checkbox" class="row-check" data-id="' + item.ka_id + '" ' + checked + ' onchange="toggleSelection(' + item.ka_id + ',this)" style="cursor:pointer;width:15px;height:15px"></td>'
+            + '<td><span class="td-code">' + escHtml(item.kpi_code) + '</span></td>'
+            + '<td class="td-intitule">' + escHtml(item.kpi_intitule) + '</td>'
+            + '<td style="font-size:.78rem;color:#666">' + escHtml(item.groupe) + '</td>'
+            + '<td style="font-weight:700;text-align:center">' + item.annee + '</td>'
+            + '<td class="td-valeur">' + valAff + '</td>'
+            + '<td class="td-taux"><div class="taux-bar-wrap"><div class="taux-bar-bg"><div class="taux-bar-fg" style="width:' + Math.min(taux,100) + '%;background:' + tausCouleur + '"></div></div><span style="font-size:.75rem;color:' + tausCouleur + ';font-weight:700;white-space:nowrap">' + taux + '%</span></div></td>'
+            + '<td class="td-collecteur">' + collecteurInfo + '</td>'
+            + '<td class="td-preuves">' + preuveBadge + '</td>'
+            + '<td><span class="badge-statut badge-' + statut + '">' + labelStatut(statut) + '</span></td>'
+            + '<td class="td-actions">' + btns + '</td>';
+        body.appendChild(tr);
+    });
+
+    document.getElementById('checkAll').checked = false;
+}
+
+function escHtml(s) {
+    return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function labelStatut(s) {
+    return {en_attente:'⏳ En attente', valide:'✅ Validé', relance:'🔁 Relancé', annule:'❌ Annulé'}[s] || s;
+}
+
+/* ════ SÉLECTION ════ */
+function toggleSelection(id, cb) {
+    if (cb.checked) idsSelectionnes.add(id);
+    else idsSelectionnes.delete(id);
+    var tr = cb.closest('tr');
+    if (tr) tr.classList.toggle('selected', cb.checked);
+    majActionsGroupe();
+}
+function toggleTout(cb) {
+    document.querySelectorAll('.row-check').forEach(function(c) {
+        c.checked = cb.checked;
+        var id = parseInt(c.dataset.id);
+        if (cb.checked) idsSelectionnes.add(id);
+        else idsSelectionnes.delete(id);
+        var tr = c.closest('tr');
+        if (tr) tr.classList.toggle('selected', cb.checked);
+    });
+    majActionsGroupe();
+}
+function toutDeselectionner() {
+    idsSelectionnes.clear();
+    document.querySelectorAll('.row-check').forEach(function(c){ c.checked = false; });
+    document.querySelectorAll('#valTableBody tr').forEach(function(r){ r.classList.remove('selected'); });
+    document.getElementById('checkAll').checked = false;
+    majActionsGroupe();
+}
+function majActionsGroupe() {
+    var n = idsSelectionnes.size;
+    var grp = document.getElementById('valActionsGroup');
+    grp.classList.toggle('visible', n > 0);
+    document.getElementById('valSelCount').textContent = n + ' sélectionné(s)';
+}
+
+/* ════ MODAL ACTION INDIVIDUELLE ════ */
+function ouvrirModalVal(ka_id, action, code, annee) {
+    actionEnCours = { action, ka_id, est_groupe: false };
+    idsGroupeEnCours = [];
+    var lbl = { valider:'✅ Valider', relancer:'🔁 Relancer', annuler:'❌ Annuler' }[action];
+    document.getElementById('modalValHeader').className = 'modal-val-header ' + action;
+    document.getElementById('modalValTitre').textContent  = lbl + ' — ' + code + ' / ' + annee;
+    document.getElementById('modalValInfo').innerHTML =
+        'KPI : <strong>' + escHtml(code) + '</strong> — Année <strong>' + annee + '</strong>';
+    document.getElementById('modalValNote').value = '';
+    document.getElementById('modalValErr').textContent   = '';
+    document.getElementById('modalValConfirm').className = 'btn-modal-confirm ' + action;
+    document.getElementById('modalValConfirmTxt').textContent = lbl;
+    document.getElementById('modalValOverlay').classList.add('open');
+    document.getElementById('modalValNote').focus();
+}
+
+function actionGroupe(action) {
+    if (idsSelectionnes.size === 0) return;
+    idsGroupeEnCours = Array.from(idsSelectionnes);
+    actionEnCours = { action, ka_id: null, est_groupe: true };
+    var lbl = { valider:'✅ Valider', relancer:'🔁 Relancer', annuler:'❌ Annuler' }[action];
+    document.getElementById('modalValHeader').className   = 'modal-val-header ' + action;
+    document.getElementById('modalValTitre').textContent  = lbl + ' — ' + idsGroupeEnCours.length + ' soumission(s)';
+    document.getElementById('modalValInfo').innerHTML     = 'Action groupée sur <strong>' + idsGroupeEnCours.length + '</strong> soumission(s) sélectionnée(s).';
+    document.getElementById('modalValNote').value         = '';
+    document.getElementById('modalValErr').textContent    = '';
+    document.getElementById('modalValConfirm').className  = 'btn-modal-confirm ' + action;
+    document.getElementById('modalValConfirmTxt').textContent = lbl;
+    document.getElementById('modalValOverlay').classList.add('open');
+    document.getElementById('modalValNote').focus();
+}
+
+function fermerModalVal() {
+    document.getElementById('modalValOverlay').classList.remove('open');
+    actionEnCours = null;
+    idsGroupeEnCours = [];
+}
+
+document.getElementById('modalValOverlay').addEventListener('click', function(e) {
+    if (e.target === this) fermerModalVal();
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') fermerModalVal();
+});
+
+async function confirmerAction() {
+    var note = document.getElementById('modalValNote').value.trim();
+    var err  = document.getElementById('modalValErr');
+    var btn  = document.getElementById('modalValConfirm');
+    var txt  = document.getElementById('modalValConfirmTxt');
+
+    if (!note) { err.textContent = '⚠️ Le commentaire est obligatoire.'; return; }
+    err.textContent = '';
+    btn.disabled = true;
+    txt.textContent = 'En cours…';
+
+    try {
+        var url, body;
+        if (actionEnCours.est_groupe) {
+            url  = '/api/admin/validations/action-groupe';
+            body = JSON.stringify({ action: actionEnCours.action, ids: idsGroupeEnCours, note });
+        } else {
+            url  = '/api/admin/validations/action/' + actionEnCours.ka_id;
+            body = JSON.stringify({ action: actionEnCours.action, note });
+        }
+        var res  = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body });
+        var data = await res.json();
+
+        if (data.status === 'success') {
+            fermerModalVal();
+            toutDeselectionner();
+            await chargerTout();
+            Swal.fire({
+                icon: 'success', title: 'Action effectuée',
+                text: actionEnCours?.est_groupe
+                    ? data.traites + ' soumission(s) traitée(s).'
+                    : 'La soumission a été mise à jour.',
+                timer: 2500, showConfirmButton: false,
+                toast: true, position: 'top-end',
+            });
+        } else {
+            err.textContent = '❌ ' + (data.error || 'Erreur inconnue');
+        }
+    } catch(e) {
+        err.textContent = '❌ Erreur réseau : ' + e.message;
+    } finally {
+        btn.disabled = false;
+        txt.textContent = document.getElementById('modalValHeader').classList[1] === 'valider'
+            ? '✅ Valider' : document.getElementById('modalValHeader').classList[1] === 'relancer'
+            ? '🔁 Relancer' : '❌ Annuler';
+    }
+}
+</script>
+{% endblock %}

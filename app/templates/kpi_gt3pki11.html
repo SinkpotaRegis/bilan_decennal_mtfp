@@ -1,0 +1,792 @@
+{% extends "base.html" %}
+
+{% block titre %}GT3PKI11 — Nombre d'agents recrutés dans l'Administration publique (2016-2026){% endblock %}
+
+{% block extra_css %}
+
+    <style>
+        /* ===== RESET & BASE ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            color: #1a1a2e;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* ===== EN-TÊTE ===== */
+        .header {
+            background: linear-gradient(135deg, #006633 0%, #008844 100%);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header h1 { font-size: 1.3rem; font-weight: 700; }
+        .header p { font-size: 0.85rem; opacity: 0.9; margin-top: 4px; }
+        .badge-code {
+            background: rgba(255,255,255,0.2);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1rem;
+            letter-spacing: 1px;
+        }
+
+        /* ===== NAVIGATION ===== */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .nav { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .nav a {
+            background: white;
+            padding: 8px 18px;
+            text-decoration: none;
+            border-radius: 8px;
+            color: #006633;
+            font-weight: bold;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+        .nav a:hover, .nav a.active { background: #006633; color: white; }
+
+        /* ===== MENU DÉROULANT "CHOIX DU KPI" ===== */
+        .kpi-dropdown { position: relative; display: inline-block; }
+        .kpi-dropdown-btn {
+            background: white;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 8px;
+            color: #006633;
+            font-weight: bold;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .kpi-dropdown-btn:hover, .kpi-dropdown-btn.ouvert { background: #006633; color: white; }
+        .kpi-dropdown-btn .fleche { font-size: 0.7rem; transition: transform 0.2s; display: inline-block; }
+        .kpi-dropdown-btn.ouvert .fleche { transform: rotate(180deg); }
+        .kpi-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            min-width: 360px;
+            z-index: 9999;
+            overflow: hidden;
+            animation: fadeDown 0.2s ease;
+        }
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .kpi-menu.visible { display: block; }
+        .kpi-menu-header { background: #006633; color: white; padding: 10px 16px; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .kpi-menu-section { padding: 8px 16px 4px; font-size: 0.72rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.6px; background: #f9f9f9; border-bottom: 1px solid #f0f0f0; }
+        .kpi-menu a {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 11px 16px; text-decoration: none; color: #222;
+            font-size: 0.83rem; border-bottom: 1px solid #f5f5f5;
+            transition: background 0.15s; background: white;
+            border-radius: 0; box-shadow: none; font-weight: normal;
+        }
+        .kpi-menu a:hover { background: #e8f5e9; color: #006633; }
+        .kpi-menu a.actif { background: #e8f5e9; border-left: 3px solid #006633; color: #006633; font-weight: 600; }
+        .kpi-menu .code-badge { background: #e8f5e9; color: #006633; font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; white-space: nowrap; margin-top: 2px; flex-shrink: 0; }
+        .kpi-menu a.actif .code-badge { background: #006633; color: white; }
+        .kpi-menu .kpi-intitule { flex: 1; line-height: 1.3; }
+
+        /* ===== FICHE KPI ===== */
+        .fiche-kpi {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #006633;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .fiche-kpi h2 { color: #006633; font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .fiche-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; font-size: 0.85rem; }
+        .fiche-item { display: flex; flex-direction: column; gap: 2px; }
+        .fiche-item label { color: #888; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .fiche-item span { color: #333; font-weight: 500; }
+        .formule-box {
+            background: #f8fdf9;
+            border: 1px dashed #006633;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: #006633;
+            text-align: center;
+        }
+
+        /* ===== CARTES STATS ===== */
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 18px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #006633;
+        }
+        .stat-card .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #888;
+            margin-top: 5px;
+        }
+        .stat-card .stat-sub {
+            font-size: 0.7rem;
+            color: #aaa;
+            margin-top: 3px;
+        }
+        .stat-card.cible .stat-value { color: #ff8c00; }
+        .stat-card.projection .stat-value { color: #1e88e5; }
+        .stat-card.ecart .stat-value { 
+            color: #e53935;
+            font-size: 1.5rem;
+        }
+
+        /* ===== SECTION SAISIE ===== */
+        .saisie-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .saisie-section h2 {
+            color: #006633;
+            font-size: 1.05rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e8f5e9;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ===== TABLEAU DES RECRUTEMENTS ===== */
+        .recrutement-table-wrapper {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        th {
+            background: #006633;
+            color: white;
+            padding: 12px 14px;
+            text-align: center;
+            font-weight: 600;
+        }
+        td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #e8f5e9;
+            text-align: center;
+        }
+        tr:nth-child(even) td { background: #f8fdf9; }
+        tr:hover td { background: #e8ffeb; }
+        .annee-col { font-weight: bold; color: #006633; }
+        .total-row td { 
+            background: #e8f5e9; 
+            font-weight: bold; 
+            border-top: 2px solid #006633;
+        }
+        input.recrutement-input {
+            width: 120px;
+            padding: 8px 12px;
+            border: 1.5px solid #ddd;
+            border-radius: 7px;
+            font-size: 0.88rem;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        input.recrutement-input:focus {
+            border-color: #006633;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0,102,51,0.1);
+        }
+        input.recrutement-input[readonly] {
+            background: #f5f5f5;
+            color: #006633;
+            font-weight: bold;
+        }
+
+        /* ===== DÉTAILS PAR CATÉGORIE ===== */
+        .details-section {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #e8f5e9;
+        }
+        .details-section h3 {
+            color: #006633;
+            font-size: 0.95rem;
+            margin-bottom: 15px;
+        }
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .categorie-card {
+            background: #fafdf9;
+            border: 1px solid #c8e6c9;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        .categorie-card h4 {
+            color: #006633;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .categorie-stats {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .categorie-stat {
+            text-align: center;
+            flex: 1;
+        }
+        .categorie-stat .value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #006633;
+        }
+        .categorie-stat .label {
+            font-size: 0.7rem;
+            color: #888;
+        }
+
+        /* ===== SECTION SOUMETTRE ===== */
+        .section-soumettre {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: none;
+        }
+        .btn-soumettre {
+            background: linear-gradient(135deg, #006633, #008844);
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn-soumettre:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(0,102,51,0.3); }
+        .btn-soumettre:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* ===== RÉSULTATS ===== */
+        #section-resultats {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: none;
+        }
+        .result-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .result-card {
+            background: linear-gradient(135deg, #006633, #1b8040);
+            color: white;
+            padding: 18px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .rc-value { font-size: 2rem; font-weight: 800; }
+        .rc-label { font-size: 0.75rem; opacity: 0.85; }
+
+        .notif { padding: 14px 18px; border-radius: 8px; margin-bottom: 15px; }
+        .notif-success { background: #e8f5e9; border: 1px solid #a5d6a7; color: #2e7d32; }
+        .notif-error { background: #ffebee; border: 1px solid #ffcdd2; color: #c62828; }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .badge-annuel {
+            display: inline-flex;
+            background: #fff3e0;
+            color: #e65100;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-left: 10px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="header">
+        <div>
+            <h1>👥 Collecte de données — Nombre d'agents recrutés dans l'Administration publique
+                <span class="badge-annuel">📅 Annuel (2016-2026)</span>
+            </h1>
+            <p>Fonction Publique · Suivi des recrutements cumulés sur la période 2016-2026</p>
+        </div>
+        <div class="badge-code">GT3PKI11</div>
+    </div>
+
+    <!-- FICHE KPI -->
+    <div class="fiche-kpi">
+        <h2>ℹ️ Fiche de l'indicateur</h2>
+        <div class="fiche-grid">
+            <div class="fiche-item">
+                <label>Intitulé</label>
+                <span>Nombre d'agents recrutés dans l'Administration publique sur la période 2016-2026</span>
+            </div>
+            <div class="fiche-item">
+                <label>Unité de mesure</label>
+                <span>Nombre (valeur absolue cumulée)</span>
+            </div>
+            <div class="fiche-item">
+                <label>Fréquence de collecte</label>
+                <span>Annuelle</span>
+            </div>
+            <div class="fiche-item">
+                <label>Sources de vérification</label>
+                <span>DGFP · Journal Officiel · Rapports DGRH · SIGRH</span>
+            </div>
+        </div>
+        <div class="formule-box">
+            <strong>Mode de calcul :</strong> Décompte cumulatif des actes de recrutement validés sur la période 2016-2026
+        </div>
+    </div>
+
+    <!-- SECTION SAISIE -->
+    <div class="saisie-section">
+        <h2>✏️ Saisie des effectifs recrutés par année</h2>
+
+        <!-- Cartes statistiques -->
+        <div class="stats-cards">
+            <div class="stat-card">
+                <div class="stat-value" id="total-cumule">0</div>
+                <div class="stat-label">Total cumulé 2016-2026</div>
+                <div class="stat-sub">agents recrutés</div>
+            </div>
+            <div class="stat-card cible">
+                <div class="stat-value" id="objectif-cible">25 000</div>
+                <div class="stat-label">Objectif GPEC 2021-2026</div>
+                <div class="stat-sub">cible définie</div>
+            </div>
+            <div class="stat-card projection">
+                <div class="stat-value" id="projection">—</div>
+                <div class="stat-label">Projection post-2026</div>
+                <div class="stat-sub">besoins sectoriels</div>
+            </div>
+            <div class="stat-card ecart">
+                <div class="stat-value" id="ecart-cible">—</div>
+                <div class="stat-label">Écart avec cible</div>
+                <div class="stat-sub">2021-2026</div>
+            </div>
+        </div>
+
+        <!-- Tableau des recrutements par année -->
+        <div class="recrutement-table-wrapper">
+            <table id="table-recrutements">
+                <thead>
+                    <tr>
+                        <th>Année</th>
+                        <th>Catégorie A</th>
+                        <th>Catégorie B</th>
+                        <th>Catégorie C</th>
+                        <th>Contractuels</th>
+                        <th>Total année</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-recrutements">
+                    <!-- Généré par JS pour les années 2016-2026 -->
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td><strong>TOTAL 2016-2026</strong></td>
+                        <td id="total-cat-a">0</td>
+                        <td id="total-cat-b">0</td>
+                        <td id="total-cat-c">0</td>
+                        <td id="total-contractuels">0</td>
+                        <td id="total-general">0</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Détails par secteur ministériel -->
+        <div class="details-section">
+            <h3>🏛️ Détail par secteur ministériel (optionnel)</h3>
+            <div class="categories-grid" id="secteurs-container">
+                <!-- Généré par JS -->
+            </div>
+        </div>
+
+        <!-- Bouton soumettre -->
+        <button class="btn-soumettre" id="btn-soumettre" onclick="soumettreDonnees()">
+            <span id="btn-icon">✅</span>
+            <span id="btn-texte">Soumettre et enregistrer</span>
+        </button>
+    </div>
+
+    <!-- SECTION RÉSULTATS -->
+    <div id="section-resultats">
+        <h2>🏆 Résultats enregistrés</h2>
+        <div id="notif-result"></div>
+        <div class="result-cards" id="result-cards"></div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ============================================================
+    // ÉTAT GLOBAL
+    // Structure: recrutementsParAnnee[annee] = { A, B, C, contractuels }
+    // ============================================================
+    let recrutementsParAnnee = {};
+    let secteursData = {};
+    let kpiId = null;
+
+    // Années de la période
+    const annees = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+    
+    // Secteurs ministériels
+    const secteurs = [
+        "Éducation nationale",
+        "Santé publique",
+        "Économie et Finances",
+        "Défense nationale",
+        "Intérieur et Sécurité",
+        "Agriculture",
+        "Numérique (Gouvernance numérique)",
+        "Autres ministères"
+    ];
+
+    // Objectif GPEC 2021-2026
+    const OBJECTIF_GPEC = 25000;
+    
+    // Projection post-2026
+    const PROJECTION_POST = "~30 000 (2027-2030)";
+
+    // ============================================================
+    // INITIALISATION
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        initialiserDonnees();
+        recupererIdKpi();
+        genererTableau();
+        genererSecteurs();
+        mettreAJourStatistiques();
+    });
+
+    function initialiserDonnees() {
+        for (let annee of annees) {
+            if (!recrutementsParAnnee[annee]) {
+                recrutementsParAnnee[annee] = {
+                    A: 0,
+                    B: 0,
+                    C: 0,
+                    contractuels: 0
+                };
+            }
+        }
+        
+        // Initialiser les données sectorielles
+        for (let secteur of secteurs) {
+            if (!secteursData[secteur]) {
+                secteursData[secteur] = 0;
+            }
+        }
+    }
+
+    async function recupererIdKpi() {
+        try {
+            const res = await fetch('/api/kpis');
+            const kpis = await res.json();
+            const kpi = kpis.find(k => k.code === 'GT3PKI11');
+            if (kpi) {
+                kpiId = kpi.id;
+                console.log('KPI GT3PKI11 trouvé, ID :', kpiId);
+            }
+        } catch (err) {
+            console.error('Erreur récupération KPI:', err);
+        }
+    }
+
+    // ============================================================
+    // GÉNÉRATION DU TABLEAU
+    // ============================================================
+    function genererTableau() {
+        const tbody = document.getElementById('tbody-recrutements');
+        tbody.innerHTML = '';
+        
+        for (let annee of annees) {
+            const data = recrutementsParAnnee[annee];
+            const totalAnnee = (data.A || 0) + (data.B || 0) + (data.C || 0) + (data.contractuels || 0);
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="annee-col">${annee}</td>
+                <td><input type="number" class="recrutement-input" id="catA-${annee}" value="${data.A || 0}" min="0" step="1" onchange="mettreAJourValeur(${annee}, 'A', this.value)"></td>
+                <td><input type="number" class="recrutement-input" id="catB-${annee}" value="${data.B || 0}" min="0" step="1" onchange="mettreAJourValeur(${annee}, 'B', this.value)"></td>
+                <td><input type="number" class="recrutement-input" id="catC-${annee}" value="${data.C || 0}" min="0" step="1" onchange="mettreAJourValeur(${annee}, 'C', this.value)"></td>
+                <td><input type="number" class="recrutement-input" id="contractuels-${annee}" value="${data.contractuels || 0}" min="0" step="1" onchange="mettreAJourValeur(${annee}, 'contractuels', this.value)"></td>
+                <td class="total-annee" id="total-${annee}">${totalAnnee.toLocaleString()}</td>
+            `;
+            tbody.appendChild(row);
+        }
+    }
+
+    function mettreAJourValeur(annee, categorie, valeur) {
+        const nb = parseInt(valeur) || 0;
+        recrutementsParAnnee[annee][categorie] = nb;
+        mettreAJourTotaux();
+        mettreAJourStatistiques();
+    }
+
+    function mettreAJourTotaux() {
+        let totalA = 0, totalB = 0, totalC = 0, totalContractuels = 0;
+        let totalGeneral = 0;
+        
+        for (let annee of annees) {
+            const data = recrutementsParAnnee[annee];
+            const totalAnnee = (data.A || 0) + (data.B || 0) + (data.C || 0) + (data.contractuels || 0);
+            totalA += data.A || 0;
+            totalB += data.B || 0;
+            totalC += data.C || 0;
+            totalContractuels += data.contractuels || 0;
+            totalGeneral += totalAnnee;
+            
+            const totalCell = document.getElementById(`total-${annee}`);
+            if (totalCell) totalCell.textContent = totalAnnee.toLocaleString();
+        }
+        
+        document.getElementById('total-cat-a').textContent = totalA.toLocaleString();
+        document.getElementById('total-cat-b').textContent = totalB.toLocaleString();
+        document.getElementById('total-cat-c').textContent = totalC.toLocaleString();
+        document.getElementById('total-contractuels').textContent = totalContractuels.toLocaleString();
+        document.getElementById('total-general').textContent = totalGeneral.toLocaleString();
+        document.getElementById('total-cumule').textContent = totalGeneral.toLocaleString();
+        
+        // Calcul de l'écart avec la cible pour 2021-2026
+        let total2021_2026 = 0;
+        for (let annee of [2021, 2022, 2023, 2024, 2025, 2026]) {
+            const data = recrutementsParAnnee[annee];
+            total2021_2026 += (data.A || 0) + (data.B || 0) + (data.C || 0) + (data.contractuels || 0);
+        }
+        const ecart = OBJECTIF_GPEC - total2021_2026;
+        const ecartElement = document.getElementById('ecart-cible');
+        if (ecartElement) {
+            ecartElement.textContent = ecart > 0 ? `-${ecart.toLocaleString()}` : `+${Math.abs(ecart).toLocaleString()}`;
+            ecartElement.style.color = ecart > 0 ? '#e53935' : '#2e7d32';
+        }
+        
+        document.getElementById('projection').textContent = PROJECTION_POST;
+        document.getElementById('objectif-cible').textContent = OBJECTIF_GPEC.toLocaleString();
+    }
+
+    function mettreAJourStatistiques() {
+        mettreAJourTotaux();
+    }
+
+    // ============================================================
+    // GÉNÉRATION DES SECTEURS
+    // ============================================================
+    function genererSecteurs() {
+        const container = document.getElementById('secteurs-container');
+        container.innerHTML = '';
+        
+        for (let secteur of secteurs) {
+            const card = document.createElement('div');
+            card.className = 'categorie-card';
+            card.innerHTML = `
+                <h4>📌 ${secteur}</h4>
+                <div class="categorie-stats">
+                    <div class="categorie-stat">
+                        <input type="number" class="recrutement-input" id="secteur-${secteur.replace(/\s/g, '')}" 
+                            value="${secteursData[secteur] || 0}" min="0" step="1" 
+                            style="width:100px;" onchange="mettreAJourSecteur('${secteur}', this.value)">
+                        <div class="label">agents recrutés</div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        }
+    }
+
+    function mettreAJourSecteur(secteur, valeur) {
+        secteursData[secteur] = parseInt(valeur) || 0;
+    }
+
+    // ============================================================
+    // SOUMISSION DES DONNÉES
+    // ============================================================
+    async function soumettreDonnees() {
+        const btn = document.getElementById('btn-soumettre');
+        const icon = document.getElementById('btn-icon');
+        const texte = document.getElementById('btn-texte');
+        
+        let totalGeneral = 0;
+        for (let annee of annees) {
+            const data = recrutementsParAnnee[annee];
+            totalGeneral += (data.A || 0) + (data.B || 0) + (data.C || 0) + (data.contractuels || 0);
+        }
+        
+        if (totalGeneral === 0) {
+            afficherNotif('Aucune donnée à soumettre. Veuillez saisir les effectifs recrutés.', 'error');
+            return;
+        }
+        
+        btn.disabled = true;
+        icon.innerHTML = '<div class="spinner"></div>';
+        texte.textContent = 'Enregistrement en cours...';
+        
+        // Construction du commentaire détaillé
+        let detailsParAnnee = [];
+        for (let annee of annees) {
+            const data = recrutementsParAnnee[annee];
+            const totalAnnee = (data.A || 0) + (data.B || 0) + (data.C || 0) + (data.contractuels || 0);
+            if (totalAnnee > 0) {
+                detailsParAnnee.push(`${annee}: ${totalAnnee} (A:${data.A || 0}, B:${data.B || 0}, C:${data.C || 0}, Ctr:${data.contractuels || 0})`);
+            }
+        }
+        
+        // Détail par secteur
+        let detailsSecteurs = [];
+        for (let secteur of secteurs) {
+            if (secteursData[secteur] > 0) {
+                detailsSecteurs.push(`${secteur}: ${secteursData[secteur]}`);
+            }
+        }
+        
+        const commentaire = `Période 2016-2026 - Total cumulé: ${totalGeneral} agents. Détail: ${detailsParAnnee.join('; ')}. Secteurs: ${detailsSecteurs.join('; ') || 'Non renseigné'}. Objectif GPEC 2021-2026: ${OBJECTIF_GPEC} agents.`;
+        
+        try {
+            const response = await fetch(`/api/kpis/annuel/update/${kpiId || 1}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    annee: 2026,
+                    numerateur: totalGeneral,
+                    denominateur: 1,
+                    commentaire: commentaire
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                afficherResultats(totalGeneral, detailsParAnnee);
+            } else {
+                afficherNotif('Erreur lors de l\'enregistrement: ' + (data.error || 'Erreur inconnue'), 'error');
+            }
+        } catch (err) {
+            afficherNotif('Erreur de connexion: ' + err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            icon.innerHTML = '✅';
+            texte.textContent = 'Soumettre et enregistrer';
+        }
+    }
+    
+    function afficherResultats(totalGeneral, details) {
+        const section = document.getElementById('section-resultats');
+        section.style.display = 'block';
+        
+        document.getElementById('notif-result').innerHTML = `
+            <div class="notif notif-success">
+                ✅ Données enregistrées avec succès ! Total cumulé 2016-2026 : ${totalGeneral.toLocaleString()} agents recrutés.
+            </div>
+        `;
+        
+        const total2021_2026 = calculerTotal2021_2026();
+        const atteinteCible = ((total2021_2026 / OBJECTIF_GPEC) * 100).toFixed(1);
+        
+        document.getElementById('result-cards').innerHTML = `
+            <div class="result-card"><div class="rc-value">${totalGeneral.toLocaleString()}</div><div class="rc-label">Total cumulé 2016-2026</div></div>
+            <div class="result-card"><div class="rc-value">${total2021_2026.toLocaleString()}</div><div class="rc-label">Recrutements 2021-2026</div></div>
+            <div class="result-card"><div class="rc-value">${atteinteCible}%</div><div class="rc-label">Objectif GPEC atteint</div></div>
+            <div class="result-card"><div class="rc-value">${PROJECTION_POST}</div><div class="rc-label">Projection post-2026</div></div>
+        `;
+        
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    function calculerTotal2021_2026() {
+        let total = 0;
+        for (let annee of [2021, 2022, 2023, 2024, 2025, 2026]) {
+            const data = recrutementsParAnnee[annee];
+            total += (data.A || 0) + (data.B || 0) + (data.C || 0) + (data.contractuels || 0);
+        }
+        return total;
+    }
+    
+    function afficherNotif(message, type) {
+        const section = document.getElementById('section-resultats');
+        section.style.display = 'block';
+        document.getElementById('notif-result').innerHTML = `
+            <div class="notif notif-${type}">${message}</div>
+        `;
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+</script>
+{% endblock %}
+</body>
+</html>

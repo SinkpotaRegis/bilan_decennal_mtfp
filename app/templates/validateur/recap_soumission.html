@@ -1,0 +1,1035 @@
+{% extends "base.html" %}
+
+{% block title %}Espace validateur - Bilan Décennal MTFP{% endblock %}
+
+{% block header_title %}📊 ESPACE VALIDATEUR{% endblock %}
+
+{% block extra_css %}
+<style>
+	.recap-page {
+		display: grid;
+		gap: 18px;
+		animation: fadeInUp 0.35s ease both;
+	}
+
+	.recap-hero,
+	.recap-toolbar,
+	.recap-table-wrap {
+		background: rgba(255,255,255,0.95);
+		backdrop-filter: blur(12px);
+		border: 1px solid rgba(214, 225, 217, 0.92);
+		border-radius: 22px;
+		box-shadow: 0 18px 46px rgba(10, 33, 18, 0.08);
+	}
+
+	.recap-hero {
+		padding: 26px;
+		background: linear-gradient(135deg, #173a54 0%, #1f5f8b 55%, #edf5ee 100%);
+		color: white;
+		position: relative;
+		overflow: hidden;
+	}
+
+	.recap-hero::after {
+		content: '';
+		position: absolute;
+		inset: auto -70px -90px auto;
+		width: 220px;
+		height: 220px;
+		border-radius: 50%;
+		background: rgba(255,255,255,0.08);
+	}
+
+	.recap-hero h2 {
+		margin: 0 0 10px;
+		font-size: clamp(26px, 4vw, 40px);
+		line-height: 1.08;
+	}
+
+	.recap-hero p {
+		margin: 0;
+		max-width: 900px;
+		line-height: 1.65;
+		opacity: 0.94;
+		font-size: 15px;
+	}
+
+	.recap-toolbar {
+		padding: 18px;
+		display: grid;
+		gap: 14px;
+	}
+
+	.group-tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+
+	.group-tab {
+		border: 1px solid #d8e6da;
+		background: #eef5ef;
+		color: #1f5f8b;
+		border-radius: 999px;
+		min-height: 42px;
+		padding: 0 16px;
+		font-weight: 700;
+		cursor: pointer;
+		transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+	}
+
+	.group-tab:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 10px 20px rgba(10, 33, 18, 0.08);
+	}
+
+	.group-tab.active {
+		background: linear-gradient(135deg, #1f5f8b, #173a54);
+		color: white;
+		border-color: #1f5f8b;
+	}
+
+	.toolbar-filters {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 12px;
+	}
+
+	.filter-field {
+		display: grid;
+		gap: 6px;
+	}
+
+	.filter-field label {
+		font-size: 12px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: #1f5f8b;
+	}
+
+	.filter-field input,
+	.filter-field select,
+	.note-input {
+		width: 100%;
+		min-height: 46px;
+		border-radius: 12px;
+		border: 1px solid #d7e2d8;
+		background: #fff;
+		padding: 11px 14px;
+		font-size: 14px;
+		color: #17311f;
+		outline: none;
+		transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.filter-field input:focus,
+	.filter-field select:focus,
+	.note-input:focus {
+		border-color: #1f5f8b;
+		box-shadow: 0 0 0 4px rgba(31, 95, 139, 0.12);
+	}
+
+	.toolbar-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.action-group {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+
+	.action-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		min-height: 44px;
+		padding: 0 16px;
+		border: none;
+		border-radius: 9px;
+		font-weight: 700;
+		cursor: pointer;
+		transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+	}
+
+	.action-btn:hover:not(:disabled) {
+		transform: translateY(-1px);
+		box-shadow: 0 10px 20px rgba(10, 33, 18, 0.12);
+	}
+
+	.action-btn:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+
+	.btn-primary { background: linear-gradient(135deg, #1f5f8b, #173a54); color: white; }
+    .btn-success { background: linear-gradient(135deg, #079c6aee, #079c6aee); color: white; }
+	.btn-danger { background: linear-gradient(135deg, #c13c2e, #e05645); color: white; }
+	.btn-warning { background: linear-gradient(135deg, #ca7a00, #e09b1b); color: white; }
+	.btn-neutral { background: #eef5ef; color: #1f5f8b; border: 1px solid #d8e6da; }
+
+	.meta-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 12px;
+		border-radius: 999px;
+		background: #f3f7fb;
+		color: #315042;
+		font-size: 12px;
+		font-weight: 600;
+	}
+
+	.chip strong { color: #17311f; }
+
+	.recap-table-wrap {
+		overflow: hidden;
+		position: relative;
+	}
+
+	.table-loader {
+		position: absolute;
+		inset: 0;
+		display: none;
+		align-items: center;
+		justify-content: center;
+		padding: 24px;
+		background: rgba(255, 255, 255, 0.76);
+		backdrop-filter: blur(4px);
+		z-index: 3;
+	}
+
+	.table-loader.open {
+		display: flex;
+	}
+
+	.table-loader-card {
+		display: inline-flex;
+		align-items: center;
+		gap: 12px;
+		padding: 16px 18px;
+		border-radius: 16px;
+		background: rgba(23, 58, 84, 0.96);
+		color: white;
+		box-shadow: 0 18px 40px rgba(10, 33, 18, 0.18);
+		font-weight: 700;
+	}
+
+	.table-loader-spinner {
+		width: 18px;
+		height: 18px;
+		border-radius: 50%;
+		border: 2px solid rgba(255, 255, 255, 0.35);
+		border-top-color: white;
+		animation: spin 0.8s linear infinite;
+	}
+
+	.empty-state-box {
+		display: grid;
+		gap: 10px;
+		place-items: center;
+		padding: 28px 16px;
+		color: #4f6654;
+		text-align: center;
+	}
+
+	.empty-state-icon {
+		width: 56px;
+		height: 56px;
+		border-radius: 50%;
+		display: grid;
+		place-items: center;
+		background: linear-gradient(135deg, #edf5ee, #dcecdf);
+		color: #1f5f8b;
+		font-size: 24px;
+	}
+
+	.table-scroll {
+		max-height: min(68vh, 740px);
+		overflow: auto;
+		overflow-y: auto;
+	}
+
+	table.recap-table {
+		width: 100%;
+		border-collapse: collapse;
+		min-width: 1250px;
+		background: white;
+	}
+
+	.recap-table thead th {
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		background: #173a54;
+		color: white;
+		font-size: 12px;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		padding: 14px 14px;
+		text-align: left;
+	}
+
+	.recap-table tbody td {
+		padding: 14px;
+		border-bottom: 1px solid #edf2ee;
+		font-size: 13px;
+		color: #21372b;
+		vertical-align: top;
+	}
+
+	.recap-table tbody tr {
+		cursor: pointer;
+		transition: background 0.18s ease;
+	}
+
+	.recap-table tbody tr:hover { background: #f6fbf7; }
+	.recap-table tbody tr.selected {
+		background: rgba(31, 95, 139, 0.08);
+		outline: 2px solid rgba(31, 95, 139, 0.22);
+		outline-offset: -2px;
+	}
+
+	.row-radio { width: 18px; height: 18px; accent-color: #1f5f8b; }
+
+	.status-pill {
+		display: inline-flex;
+		align-items: center;
+		padding: 6px 10px;
+		border-radius: 999px;
+		font-size: 11px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+	}
+
+	.status-en_attente { background: #fff4da; color: #a46a00; }
+	.status-valide { background: #e3f6e8; color: #1f7a44; }
+	.status-relance { background: #e7eefc; color: #2459a7; }
+	.status-annule { background: #fde7e6; color: #b93e31; }
+
+	.note-cell { max-width: 420px; line-height: 1.5; }
+	.note-input { min-height: 90px; resize: vertical; }
+
+	.empty-state,
+	.loading-state {
+		padding: 40px 22px;
+		text-align: center;
+		color: #5c705f;
+	}
+
+	.pagination-bar {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+		align-items: center;
+		justify-content: space-between;
+		padding: 16px 18px 20px;
+	}
+
+	.pagination-controls {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	.page-btn {
+		min-width: 42px;
+		min-height: 42px;
+		border-radius: 12px;
+		border: 1px solid #d9e4db;
+		background: white;
+		color: #1f5f8b;
+		cursor: pointer;
+		font-weight: 700;
+	}
+
+	.page-btn.active {
+		background: #1f5f8b;
+		color: white;
+		border-color: #1f5f8b;
+	}
+
+	.page-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+	.helper-text { font-size: 12px; color: #5d7167; }
+
+	.action-note {
+		display: grid;
+		gap: 8px;
+		padding: 0 18px 18px;
+	}
+
+	.action-note label {
+		font-size: 12px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: #1f5f8b;
+	}
+
+	.comment-history {
+		border-top: 1px solid #e3ece5;
+		padding-top: 4px;
+		display: grid;
+		gap: 8px;
+	}
+
+	.comment-history-title {
+		margin: 0;
+		font-size: 12px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: #1f5f8b;
+	}
+
+	.comment-history-list {
+		display: grid;
+		gap: 10px;
+		max-height: 220px;
+		overflow: auto;
+		padding-right: 4px;
+	}
+
+	.comment-item {
+		border: 1px solid #dce7dd;
+		border-radius: 14px;
+		padding: 12px 14px;
+		background: #f8fcf9;
+	}
+
+	.comment-item-meta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		justify-content: space-between;
+		font-size: 11px;
+		color: #6b7f70;
+		margin-bottom: 8px;
+	}
+
+	.comment-item-text {
+		margin: 0;
+		white-space: pre-line;
+		color: #21372b;
+		line-height: 1.55;
+	}
+
+	@keyframes fadeInUp {
+		from { opacity: 0; transform: translateY(12px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+
+	@keyframes spin {
+		from { transform: rotate(0deg); }
+		to { transform: rotate(360deg); }
+	}
+
+	@media (max-width: 1100px) {
+		.toolbar-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	}
+
+	@media (max-width: 720px) {
+		.toolbar-filters { grid-template-columns: 1fr; }
+		.toolbar-actions,
+		.pagination-bar { align-items: flex-start; flex-direction: column; }
+	}
+
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		background: rgba(13, 28, 20, 0.55);
+		backdrop-filter: blur(4px);
+		display: none;
+		align-items: center;
+		justify-content: center;
+		padding: 20px;
+		z-index: 1000;
+	}
+
+	.modal-overlay.open {
+		display: flex;
+	}
+
+	.modal-card {
+		width: min(640px, 100%);
+		background: white;
+		border-radius: 22px;
+		box-shadow: 0 28px 60px rgba(0, 0, 0, 0.22);
+		border: 1px solid rgba(214, 225, 217, 0.92);
+		overflow: hidden;
+	}
+
+	.modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 12px;
+		padding: 18px 20px;
+		background: linear-gradient(135deg, #173a54 0%, #1f5f8b 100%);
+		color: white;
+	}
+
+	.modal-header h3 {
+		margin: 0;
+		font-size: 18px;
+	}
+
+	.modal-close {
+		border: none;
+		background: rgba(255, 255, 255, 0.16);
+		color: white;
+		width: 38px;
+		height: 38px;
+		border-radius: 999px;
+		cursor: pointer;
+		font-size: 20px;
+		line-height: 1;
+	}
+
+	.modal-body {
+		display: grid;
+		gap: 14px;
+		padding: 18px 20px 20px;
+	}
+
+	.modal-body label {
+		font-size: 12px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: #1f5f8b;
+	}
+
+	.modal-body textarea {
+		width: 100%;
+		min-height: 140px;
+		resize: vertical;
+		border-radius: 14px;
+		border: 1px solid #d7e2d8;
+		padding: 12px 14px;
+		font: inherit;
+		color: #17311f;
+		outline: none;
+	}
+
+	.modal-body textarea:focus {
+		border-color: #1f5f8b;
+		box-shadow: 0 0 0 4px rgba(31, 95, 139, 0.12);
+	}
+
+	.modal-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 10px;
+		padding-top: 4px;
+	}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="recap-page">
+    
+	<section class="recap-hero">
+		<h2>Récapitulatif des soumissions à valider</h2>
+		<p>
+			Consultez les soumissions de votre direction, filtrez par code KPI, année ou statut, puis sélectionnez une ligne pour la valider,
+			la relancer ou l’annuler avec une note obligatoire.
+		</p>
+	</section>
+
+	<section class="recap-toolbar">
+        
+		<div class="toolbar-filters">
+			<div class="filter-field">
+				<label for="filtre-code">Code KPI</label>
+				<input id="filtre-code" type="text" placeholder="Ex. GT3PKI06">
+			</div>
+			<div class="filter-field">
+				<label for="filtre-indicateur">Indicateur</label>
+				<input id="filtre-indicateur" type="text" placeholder="Nom ou code de l’indicateur">
+			</div>
+			<div class="filter-field">
+				<label for="filtre-annee">Année</label>
+				<input id="filtre-annee" type="number" min="2016" max="2026" placeholder="Ex. 2026">
+			</div>
+			<div class="filter-field">
+				<label for="filtre-statut">Statut</label>
+				<select id="filtre-statut">
+					<option value="">Tous les statuts</option>
+					<option value="en_attente">En attente</option>
+					<option value="valide">Validé</option>
+					<option value="relance">Relancé</option>
+					<option value="annule">Annulé</option>
+				</select>
+			</div>
+			<div class="filter-field">
+				<label>&nbsp;</label>
+				<button class="action-btn btn-neutral" type="button" id="btn-appliquer-filtres">Filtrer</button>
+			</div>
+		</div>
+        
+
+		<div class="toolbar-actions">
+			<div class="action-group">
+				<button class="action-btn btn-primary" type="button" id="btn-consulter" disabled>Consulter</button>
+				<button class="action-btn btn-warning" type="button" id="btn-relancer" disabled>Relancer</button>
+				<button class="action-btn btn-success" type="button" id="btn-valider" disabled>Valider</button>
+				<button class="action-btn btn-danger" type="button" id="btn-annuler" disabled>Annuler</button>
+				<button class="action-btn btn-neutral" type="button" id="btn-reinitialiser">Réinitialiser</button>
+			</div>
+			<div class="helper-text" id="selection-helper">Sélectionnez une ligne dans le tableau pour activer les actions.</div>
+		</div>
+
+		<div class="meta-chips">
+			<!-- <span class="chip">Validateur connecté: <strong>{{ current_user.username }}</strong></span>
+			<span class="chip">Direction: <strong>{{ current_user.structure or 'MTFP' }}</strong></span> -->
+			<span class="chip">Total lignes: <strong id="total-lignes">0</strong></span>
+		</div>
+	</section>
+
+    <div class="group-tabs" id="group-tabs">
+        <button type="button" class="group-tab active" data-group-id="1">Groupe Thématique 1</button>
+        <button type="button" class="group-tab" data-group-id="2">Groupe Thématique 2</button>
+        <button type="button" class="group-tab" data-group-id="3">Groupe Thématique 3</button>
+    </div>
+	<section class="recap-table-wrap">
+		<div class="table-loader" id="table-loader" aria-hidden="true">
+			<div class="table-loader-card">
+				<span class="table-loader-spinner" aria-hidden="true"></span>
+				<span id="table-loader-text">Chargement des données...</span>
+			</div>
+		</div>
+        <div class="table-scroll">
+            
+			<table class="recap-table">
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>Année</th>
+						<th>Direction concernée</th>
+						<th>Code indicateur</th>
+						<th>Intitulé indicateur</th>
+						<th>Valeur indicateur</th>
+						<th>Statut validation</th>
+						<th>Note</th>
+						
+					</tr>
+				</thead>
+				<tbody id="recap-body">
+					<tr><td colspan="9" class="loading-state">Chargement des données...</td></tr>
+				</tbody>
+			</table>
+		</div>
+		<div class="pagination-bar">
+			<div class="helper-text" id="pagination-summary">0 résultat</div>
+			<div class="pagination-controls" id="pagination-controls"></div>
+		</div>
+	</section>
+</div>
+
+<div class="modal-overlay" id="note-modal" aria-hidden="true">
+	<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="note-modal-title">
+		<div class="modal-header">
+			<h3 id="note-modal-title">Note de validation</h3>
+			<button type="button" class="modal-close" id="btn-fermer-modal" aria-label="Fermer la modale">×</button>
+		</div>
+		<div class="modal-body">
+			<div class="helper-text" id="modal-context"></div>
+			<label for="note-action">Note</label>
+			<textarea id="note-action" class="note-input" placeholder="Ajoutez une note de suivi. Vous pouvez écrire plusieurs lignes."></textarea>
+			<div class="comment-history">
+				<p class="comment-history-title">Notes précédentes</p>
+				<div class="comment-history-list" id="comment-history-list">
+					<div class="helper-text">Sélectionnez une ligne pour consulter l'historique des notes.</div>
+				</div>
+			</div>
+			<div class="modal-actions">
+				<button class="action-btn btn-neutral" type="button" id="btn-annuler-modal">Fermer</button>
+				<button class="action-btn btn-primary" type="button" id="btn-confirmer-action">Confirmer</button>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+	const recapState = {
+		page: 1,
+		perPage: 10,
+		total: 0,
+		pages: 1,
+		items: [],
+		selectedId: null,
+	};
+
+	const filters = {
+		code: document.getElementById('filtre-code'),
+		indicateur: document.getElementById('filtre-indicateur'),
+		annee: document.getElementById('filtre-annee'),
+		statut: document.getElementById('filtre-statut'),
+	};
+
+	const groupTabs = document.querySelectorAll('.group-tab');
+
+	const recapBody = document.getElementById('recap-body');
+	const tableLoader = document.getElementById('table-loader');
+	const tableLoaderText = document.getElementById('table-loader-text');
+	const paginationControls = document.getElementById('pagination-controls');
+	const paginationSummary = document.getElementById('pagination-summary');
+	const totalLignes = document.getElementById('total-lignes');
+	const selectionHelper = document.getElementById('selection-helper');
+	const btnConsulter = document.getElementById('btn-consulter');
+	const btnValider = document.getElementById('btn-valider');
+	const btnAnnuler = document.getElementById('btn-annuler');
+	const btnRelancer = document.getElementById('btn-relancer');
+	const noteAction = document.getElementById('note-action');
+	const noteModal = document.getElementById('note-modal');
+	const modalContext = document.getElementById('modal-context');
+	const commentHistoryList = document.getElementById('comment-history-list');
+	const btnFermerModal = document.getElementById('btn-fermer-modal');
+	const btnAnnulerModal = document.getElementById('btn-annuler-modal');
+	const btnConfirmerAction = document.getElementById('btn-confirmer-action');
+	let pendingAction = null;
+	let activeGroupId = 1;
+	const TABLE_LOADER_MIN_DURATION = 3000;
+	let tableLoaderShownAt = 0;
+
+	function statutLabel(value) {
+		const map = {
+			en_attente: 'En attente',
+			valide: 'Validé',
+			relance: 'Relancé',
+			annule: 'Annulé',
+		};
+		return map[(value || '').toLowerCase()] || value || 'Inconnu';
+	}
+
+	function statutClass(value) {
+		return `status-${(value || '').toLowerCase()}`;
+	}
+
+	function formatKpiValue(value) {
+		if (value === null || value === undefined || value === '') return '';
+
+		const numericValue = Number(value);
+		if (!Number.isFinite(numericValue)) return value;
+
+		return Number.isInteger(numericValue)
+			? `${numericValue}`
+			: numericValue.toLocaleString('fr-FR', {
+				minimumFractionDigits: 3,
+				maximumFractionDigits: 3,
+			});
+	}
+
+	function setTableLoading(isLoading, message = 'Chargement des données...') {
+		tableLoader.classList.toggle('open', isLoading);
+		tableLoader.setAttribute('aria-hidden', isLoading ? 'false' : 'true');
+		tableLoaderText.textContent = message;
+		if (isLoading) {
+			tableLoaderShownAt = Date.now();
+		}
+	}
+
+	function hideTableLoading() {
+		const elapsed = Date.now() - tableLoaderShownAt;
+		const remaining = Math.max(0, TABLE_LOADER_MIN_DURATION - elapsed);
+		return new Promise((resolve) => {
+			window.setTimeout(() => {
+				setTableLoading(false);
+				resolve();
+			}, remaining);
+		});
+	}
+
+	function renderEmptyState(message, icon = '📭') {
+		return `
+			<tr>
+				<td colspan="10">
+					<div class="empty-state-box">
+						<div class="empty-state-icon" aria-hidden="true">${icon}</div>
+						<div>
+							<strong>${message}</strong>
+						</div>
+						<div class="helper-text">Essayez d’élargir les filtres ou changez d’onglet thématique.</div>
+					</div>
+				</td>
+			</tr>
+		`;
+	}
+
+	function buildQuery(page) {
+		const params = new URLSearchParams();
+		params.set('page', page);
+		params.set('per_page', recapState.perPage);
+		params.set('groupe_id', activeGroupId);
+		if (filters.code.value.trim()) params.set('code', filters.code.value.trim());
+		if (filters.indicateur.value.trim()) params.set('indicateur', filters.indicateur.value.trim());
+		if (filters.annee.value.trim()) params.set('annee', filters.annee.value.trim());
+		if (filters.statut.value.trim()) params.set('statut', filters.statut.value.trim());
+		return params.toString();
+	}
+
+	async function fetchJson(url, options = {}) {
+		const response = await fetch(url, {
+			headers: { 'Accept': 'application/json', ...(options.headers || {}) },
+			...options,
+		});
+		const contentType = response.headers.get('content-type') || '';
+		if (!contentType.includes('application/json')) {
+			const bodyText = await response.text();
+			throw new Error(bodyText.includes('<html') || bodyText.includes('<!DOCTYPE')
+				? 'La session a expiré ou le serveur a renvoyé une page HTML. Rechargez la page pour continuer.'
+				: bodyText || 'Réponse inattendue du serveur');
+		}
+		return response.json();
+	}
+
+	function renderCommentHistory(commentaires = []) {
+		if (!commentaires.length) {
+			commentHistoryList.innerHTML = '<div class="helper-text">Aucune note précédente.</div>';
+			return;
+		}
+
+		commentHistoryList.innerHTML = commentaires.map((commentaire) => `
+			<div class="comment-item">
+				<div class="comment-item-meta">
+					<span>${commentaire.ajoute_par || 'Utilisateur inconnu'}</span>
+					<span>${commentaire.date_ajout || ''}</span>
+				</div>
+				<p class="comment-item-text">${commentaire.commentaire || ''}</p>
+			</div>
+		`).join('');
+	}
+
+	function activerGroupe(groupeId) {
+		activeGroupId = groupeId;
+		groupTabs.forEach((tab) => {
+			tab.classList.toggle('active', Number(tab.dataset.groupId) === Number(groupeId));
+		});
+		recapState.selectedId = null;
+		chargerDonnees(1);
+	}
+
+	async function chargerDonnees(page = 1) {
+		recapState.page = page;
+		setTableLoading(true);
+		recapBody.innerHTML = '<tr><td colspan="9" class="loading-state">Chargement des données...</td></tr>';
+		btnConsulter.disabled = true;
+		btnValider.disabled = true;
+		btnAnnuler.disabled = true;
+		btnRelancer.disabled = true;
+		selectionHelper.textContent = 'Sélectionnez une ligne dans le tableau pour activer les actions.';
+
+		try {
+			const payload = await fetchJson(`/api/validateur/recap-soumissions?${buildQuery(page)}`);
+			if (payload.error) throw new Error(payload.error || 'Impossible de charger les données');
+
+			recapState.items = payload.items || [];
+			recapState.total = payload.total || 0;
+			recapState.pages = payload.pages || 1;
+			recapState.page = payload.page || page;
+			renderTable();
+			renderPagination();
+		} catch (error) {
+			recapBody.innerHTML = renderEmptyState(error.message, '⚠️');
+			paginationControls.innerHTML = '';
+			paginationSummary.textContent = 'Erreur de chargement';
+			totalLignes.textContent = '0';
+		} finally {
+			await hideTableLoading();
+		}
+	}
+
+	function renderTable() {
+		totalLignes.textContent = recapState.total;
+		paginationSummary.textContent = recapState.total === 1 ? '1 résultat' : `${recapState.total} résultats`;
+
+		if (!recapState.items.length) {
+			recapBody.innerHTML = renderEmptyState('Aucune soumission trouvée pour ces filtres.', '📭');
+			return;
+		}
+
+		recapBody.innerHTML = recapState.items.map((item, index) => {
+			const checked = recapState.selectedId === item.recap_id ? 'checked' : '';
+			const selectedClass = recapState.selectedId === item.recap_id ? 'selected' : '';
+			return `
+				<tr class="${selectedClass}" data-row-id="${item.recap_id}" onclick="selectRow(${item.recap_id})">
+					<td style="text-align:center;"><input type="radio" class="row-radio" name="row-selection" value="${item.recap_id}" ${checked} onclick="event.stopPropagation(); selectRow(${item.recap_id})"></td>
+					<td>${item.annee || ''}</td>
+					<td>${item.direction_concernee || ''}</td>
+					<td>${item.code_indicateur || ''}</td>
+					<td>${item.intitule_indicateur || ''}</td>
+					<b><td>${formatKpiValue(item.valeur_indicateur)}</td></b>
+					<td><span class="status-pill ${statutClass(item.validation_status)}">${statutLabel(item.validation_status)}</span></td>
+					<td class="note-cell">${item.note ? item.note : '<span style="color:#7a8d7e">Aucune note disponible</span>'}</td>
+					
+				</tr>
+			`;
+		}).join('');
+	}
+
+	function renderPagination() {
+		const pages = recapState.pages || 1;
+		const current = recapState.page || 1;
+		const buttons = [];
+
+		buttons.push(`<button class="page-btn" type="button" ${current === 1 ? 'disabled' : ''} onclick="chargerDonnees(${current - 1})">‹</button>`);
+		const start = Math.max(1, current - 2);
+		const end = Math.min(pages, current + 2);
+
+		if (start > 1) {
+			buttons.push(`<button class="page-btn" type="button" onclick="chargerDonnees(1)">1</button>`);
+			if (start > 2) buttons.push('<span class="helper-text" style="align-self:center;">...</span>');
+		}
+
+		for (let page = start; page <= end; page++) {
+			buttons.push(`<button class="page-btn ${page === current ? 'active' : ''}" type="button" onclick="chargerDonnees(${page})">${page}</button>`);
+		}
+
+		if (end < pages) {
+			if (end < pages - 1) buttons.push('<span class="helper-text" style="align-self:center;">...</span>');
+			buttons.push(`<button class="page-btn" type="button" onclick="chargerDonnees(${pages})">${pages}</button>`);
+		}
+
+		buttons.push(`<button class="page-btn" type="button" ${current === pages ? 'disabled' : ''} onclick="chargerDonnees(${current + 1})">›</button>`);
+		paginationControls.innerHTML = buttons.join('');
+	}
+
+	function selectRow(id) {
+		recapState.selectedId = id;
+		renderTable();
+
+		const row = recapState.items.find(item => item.recap_id === id);
+		if (row) {
+			const isLocked = ['valide', 'annule'].includes((row.validation_status || '').toLowerCase());
+			selectionHelper.textContent = isLocked
+				? `${row.code_indicateur} - ${row.annee} est déjà validé ou annulé. La note n’est plus modifiable.`
+				: `${row.code_indicateur} - ${row.annee} sélectionné.`;
+			btnConsulter.disabled = false;
+			btnValider.disabled = isLocked;
+			btnAnnuler.disabled = isLocked;
+			btnRelancer.disabled = isLocked;
+			renderCommentHistory(row.commentaires || []);
+		}
+	}
+
+	function getSelectedRow() {
+		return recapState.items.find(item => item.recap_id === recapState.selectedId) || null;
+	}
+
+	function ouvrirConsultation() {
+		const row = getSelectedRow();
+		if (!row || !row.consult_url) return;
+		window.open(row.consult_url, '_blank');
+	}
+
+	function ouvrirModalAction(action) {
+		const row = getSelectedRow();
+		if (!row) return;
+		if (['valide', 'annule'].includes((row.validation_status || '').toLowerCase())) {
+			window.swalInfo('Soumission verrouillée', 'Cette soumission a déjà été validée et ne peut plus être modifiée.');
+			return;
+		}
+		pendingAction = action;
+		modalContext.textContent = `${row.code_indicateur} - ${row.annee} | ${statutLabel(action)}`;
+		noteAction.value = row.note || '';
+		renderCommentHistory(row.commentaires || []);
+		noteModal.classList.add('open');
+		noteModal.setAttribute('aria-hidden', 'false');
+		noteAction.focus();
+	}
+
+	function fermerModalAction() {
+		pendingAction = null;
+		noteModal.classList.remove('open');
+		noteModal.setAttribute('aria-hidden', 'true');
+	}
+
+	async function envoyerAction(action) {
+		const row = getSelectedRow();
+		if (!row) return;
+		if (['valide', 'annule'].includes((row.validation_status || '').toLowerCase())) {
+			window.swalInfo('Soumission verrouillée', 'Cette soumission a déjà été validée et ne peut plus être modifiée.');
+			return;
+		}
+
+		const note = noteAction.value.trim();
+		if (!note) {
+			window.swalError('Note requise', 'Une note est obligatoire pour cette action.');
+			return;
+		}
+
+		try {
+			const payload = await fetchJson(`/api/validateur/recap-soumissions/action/${row.recap_id}`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action, note })
+			});
+			if (payload.error) throw new Error(payload.error || 'Action impossible');
+			recapState.selectedId = null;
+			noteAction.value = '';
+			fermerModalAction();
+			await chargerDonnees(recapState.page);
+			window.swalSuccess('Action enregistrée', `La soumission ${row.code_indicateur} - ${row.annee} a été mise à jour.`);
+		} catch (error) {
+			window.swalError('Erreur de validation', error.message);
+		}
+	}
+
+	document.getElementById('btn-appliquer-filtres').addEventListener('click', () => chargerDonnees(1));
+	document.getElementById('btn-reinitialiser').addEventListener('click', () => {
+		filters.code.value = '';
+		filters.indicateur.value = '';
+		filters.annee.value = '';
+		filters.statut.value = '';
+		recapState.selectedId = null;
+		noteAction.value = '';
+		fermerModalAction();
+		chargerDonnees(1);
+	});
+	btnConsulter.addEventListener('click', ouvrirConsultation);
+	btnValider.addEventListener('click', () => ouvrirModalAction('valider'));
+	btnAnnuler.addEventListener('click', () => ouvrirModalAction('annuler'));
+	btnRelancer.addEventListener('click', () => ouvrirModalAction('relancer'));
+	btnFermerModal.addEventListener('click', fermerModalAction);
+	btnAnnulerModal.addEventListener('click', fermerModalAction);
+	btnConfirmerAction.addEventListener('click', () => {
+		if (!pendingAction) return;
+		envoyerAction(pendingAction);
+	});
+	noteModal.addEventListener('click', (event) => {
+		if (event.target === noteModal) fermerModalAction();
+	});
+	document.addEventListener('keydown', (event) => {
+		if (event.key === 'Escape' && noteModal.classList.contains('open')) {
+			fermerModalAction();
+		}
+	});
+
+	filters.code.addEventListener('keydown', (event) => { if (event.key === 'Enter') chargerDonnees(1); });
+	filters.indicateur.addEventListener('keydown', (event) => { if (event.key === 'Enter') chargerDonnees(1); });
+	filters.annee.addEventListener('keydown', (event) => { if (event.key === 'Enter') chargerDonnees(1); });
+
+	groupTabs.forEach((tab) => {
+		tab.addEventListener('click', () => activerGroupe(Number(tab.dataset.groupId)));
+	});
+
+	chargerDonnees(1);
+</script>
+{% endblock %}

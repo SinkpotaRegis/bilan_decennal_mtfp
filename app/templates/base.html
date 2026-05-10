@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    {% include 'head.html' %}
+    <style>
+        .submission-context {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+            gap: 16px;
+            align-items: center;
+            margin: 18px 0 22px;
+            padding: 18px 20px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, rgba(0, 102, 51, 0.08), rgba(0, 136, 68, 0.14));
+            border: 1px solid rgba(0, 102, 51, 0.12);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+        }
+
+        .submission-context__title {
+            margin: 0 0 6px;
+            color: #0d3b22;
+            font-size: 1.02rem;
+            font-weight: 700;
+        }
+
+        .submission-context__text {
+            margin: 0;
+            color: #355244;
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
+        .submission-context__field label {
+            display: block;
+            margin-bottom: 8px;
+            color: #0d3b22;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .submission-context__field select {
+            width: 100%;
+            min-height: 48px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 102, 51, 0.18);
+            background: #fff;
+            color: #183525;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        .submission-context__field select:focus {
+            border-color: #006633;
+            box-shadow: 0 0 0 4px rgba(0, 102, 51, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .submission-context__hint {
+            margin-top: 8px;
+            color: #5d7167;
+            font-size: 0.8rem;
+        }
+
+        /* Masquer les boutons d'action ligne par ligne dans les tableaux KPI (édition globale).
+           Cible uniquement les boutons à l'intérieur du corps du tableau pour ne pas cacher
+           les boutons globaux (ex: "Enregistrer tout"). */
+        .recap-section table#table-main tbody .btn-edit,
+        .recap-section table#table-main tbody .btn-del,
+        .recap-section table#table-main tbody .btn-save {
+            display: none !important;
+        }
+
+        @media (max-width: 900px) {
+            .submission-context {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body data-current-user-id="{{ current_user.id if current_user.is_authenticated else '' }}">
+    <!-- <div class="header">
+        <h1>{% block header_title %}BILAN DÉCENNAL DU MTFP{% endblock %}</h1>
+        <p>2016 - 2026 | Programmes d'Actions du Gouvernement (PAG 1 & PAG 2)</p>
+        <p>🏛️ Ministère du Travail et de la Fonction Publique - Bénin</p>
+    </div> -->
+
+    {% include 'header.html' %}
+
+    {% if request.path.startswith('/kpi/') or (page_active is defined and page_active == 'kpi') %}
+    <section class="submission-context" aria-label="Contexte de soumission KPI">
+        <div>
+            <p class="submission-context__title">Contexte de soumission</p>
+            <p class="submission-context__text">Renseignez la direction concernée avant d'enregistrer les données. Cette valeur sera conservée avec chaque soumission KPI pour faciliter le suivi et la validation.</p>
+        </div>
+        <div class="submission-context__field">
+            <label for="direction-concernee">Direction concernée</label>
+            <select id="direction-concernee" name="direction" required>
+                <option value="" selected disabled>Sélectionner une direction</option>
+                <option value="SGM">SGM — Secrétariat Général du Ministère</option>
+                <option value="DSI">DSI — Direction des Systèmes d'Information</option>
+                <option value="DPAF">DPAF — Direction de la Programmation et de l'Administration Financière</option>
+                <option value="DGT">DGT — Direction Générale du Travail</option>
+                <option value="DGFP">DGFP — Direction Générale de la Fonction Publique</option>
+            </select>
+            <div class="submission-context__hint" id="direction-hint" style="display:none"></div>
+        </div>
+    </section>
+    {% endif %}
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    {% include 'footer.html' %}
+
+    {% block extra_js %}{% endblock %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function () {
+            if (window.__kpiSubmissionEnhancerInstalled) {
+                return;
+            }
+            window.__kpiSubmissionEnhancerInstalled = true;
+
+            const originalFetch = window.fetch.bind(window);
+
+            function getDirectionSelectionnee() {
+                const select = document.getElementById('direction-concernee');
+                return select ? select.value.trim() : '';
+            }
+
+            function enrichJsonBody(body) {
+                if (typeof body !== 'string') {
+                    return body;
+                }
+
+                let payload;
+                try {
+                    payload = JSON.parse(body);
+                } catch (error) {
+                    return body;
+                }
+
+                const direction = getDirectionSelectionnee();
+                if (!direction) {
+                    throw new Error('La sélection de la direction est obligatoire avant l’enregistrement.');
+                }
+
+                if (!payload.direction) {
+                    payload.direction = direction;
+                }
+
+                return JSON.stringify(payload);
+            }
+
+            window.fetch = function (resource, init) {
+                const options = init ? { ...init } : {};
+                const url = typeof resource === 'string' ? resource : resource && resource.url ? resource.url : '';
+
+                if (typeof url === 'string' && /\/api\/kpis\/(annuel\/update\/\d+|trimestriel\/update\/\d+|update\/\d+)/.test(url)) {
+                    try {
+                        options.body = enrichJsonBody(options.body);
+                    } catch (error) {
+                        window.swalError('Direction obligatoire', error.message);
+                        return Promise.reject(error);
+                    }
+                }
+
+                return originalFetch(resource, options);
+            };
+
+            function fireToast(icon, title, text) {
+                if (window.Swal) {
+                    return Swal.fire({
+                        icon,
+                        title,
+                        text,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3200,
+                        timerProgressBar: true,
+                        background: '#ffffff',
+                        color: '#17311f',
+                    });
+                }
+
+                window.alert(text || title);
+                return Promise.resolve();
+            }
+
+            window.swalSuccess = function (title, text) {
+                return fireToast('success', title, text);
+            };
+
+            window.swalError = function (title, text) {
+                return fireToast('error', title, text);
+            };
+
+            window.swalInfo = function (title, text) {
+                return fireToast('info', title, text);
+            };
+
+            window.swalConfirm = function ({ title, text, confirmButtonText = 'Confirmer', cancelButtonText = 'Annuler' }) {
+                if (window.Swal) {
+                    return Swal.fire({
+                        icon: 'warning',
+                        title,
+                        text,
+                        showCancelButton: true,
+                        confirmButtonText,
+                        cancelButtonText,
+                        confirmButtonColor: '#1f5b3a',
+                        cancelButtonColor: '#6c757d',
+                        reverseButtons: true,
+                    });
+                }
+
+                return Promise.resolve({ isConfirmed: window.confirm(text || title) });
+            };
+            // ======= KPI: retirer colonne Action et ajouter boutons globaux =======
+            document.addEventListener('DOMContentLoaded', () => {
+                try {
+                    const tables = document.querySelectorAll('.recap-section table#table-main');
+                    tables.forEach(tbl => {
+                        // Retirer l'en-tête 'Action' si présent
+                        const ths = tbl.querySelectorAll('thead th');
+                        if (ths.length && ths[ths.length - 1].textContent.trim().toLowerCase() === 'action') {
+                            ths[ths.length - 1].remove();
+                        }
+
+                        // Retirer la dernière colonne de chaque ligne (les boutons individuels)
+                        tbl.querySelectorAll('tbody tr').forEach(r => {
+                            const cells = r.querySelectorAll('td');
+                            if (cells.length) {
+                                // si la dernière cellule contient un bouton d'action, on la supprime
+                                cells[cells.length - 1].remove();
+                            }
+                        });
+
+                        // Ajouter les boutons globaux après la table-wrapper (une seule fois)
+                        const wrapper = tbl.closest('.table-wrapper');
+                        if (wrapper && !wrapper.querySelector('.kpi-global-actions')) {
+                            const actionsDiv = document.createElement('div');
+                            actionsDiv.className = 'kpi-global-actions';
+                            actionsDiv.style.textAlign = 'right';
+                            actionsDiv.style.marginTop = '12px';
+                            actionsDiv.innerHTML = `
+                                <button id="kpi-soumettre-tout" class="btn-save">Soumettre tout</button>
+                            `;
+                            wrapper.parentNode.insertBefore(actionsDiv, wrapper.nextSibling);
+
+                            // Bind events (attendent que les variables de la page KPI soient définies)
+                            const btnSubmit = actionsDiv.querySelector('#kpi-soumettre-tout');
+                           
+                            btnSubmit.addEventListener('click', async () => {
+                                if (typeof window.soumettreTout === 'function') {
+                                    await window.soumettreTout();
+                                }  else {
+                                    window.swalError('Erreur', "Fonction de soumission indisponible.");
+                                }
+                            });
+                        }
+                    });
+                } catch (err) {
+                    console.error('Enhancer KPI global error:', err);
+                }
+            });
+
+            // Fonction utilitaire pour enregistrer toutes les lignes d'un KPI (utilisée par le bouton global)
+       
+            window.soumettreTout = async function () {
+                // Parcourt toutes les lignes de tous les tableaux KPI présents sur la page
+                // et soumet chaque année trouvée vers l'API.
+                const inputs = Array.from(document.querySelectorAll('input[id^="inp-num-"]'));
+                const entries = [];
+                const idRe = /^inp-num-(\d+)-(\d+)$/;
+                for (const inp of inputs) {
+                    const m = inp.id.match(idRe);
+                    if (!m) continue;
+                    const kpiId = m[1];
+                    const annee = parseInt(m[2], 10);
+                    const numEl = inp;
+                    const denEl = document.getElementById(`inp-den-${kpiId}-${annee}`);
+                    const comEl = document.getElementById(`com-${kpiId}-${annee}`);
+                    const fc = document.getElementById(`fc-${kpiId}-${annee}`);
+
+                    const numerateur = parseFloat(numEl.value) || 0;
+                    const denominateur = denEl ? (parseFloat(denEl.value) || 0) : 0;
+                    const commentaire = comEl ? (comEl.value || '').trim() : '';
+                    const fichiersCount = fc ? (fc.querySelectorAll('li').length) : 0;
+
+                    // Ne pas soumettre les lignes totalement vides (pas de valeur, pas de commentaire, pas de fichier)
+                    if (numerateur === 0 && denominateur === 0 && !commentaire && fichiersCount === 0) continue;
+
+                    entries.push({ kpiId, annee, numerateur, denominateur, commentaire });
+                }
+
+                if (entries.length === 0) {
+                    window.swalInfo('Rien à soumettre', 'Aucune ligne remplie trouvée sur la page.');
+                    return;
+                }
+
+                const erreurs = [];
+                // envoyer séquentiellement pour éviter la saturation
+                for (const e of entries) {
+                    try {
+                        const res = await fetch(`/api/kpis/annuel/update/${e.kpiId}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ annee: e.annee, numerateur: e.numerateur, denominateur: e.denominateur, commentaire: e.commentaire })
+                        });
+                        const data = await res.json();
+                        if (!(data && data.status === 'success')) {
+                            erreurs.push({ kpiId: e.kpiId, annee: e.annee, error: data.error || 'Erreur inconnue' });
+                        }
+                    } catch (err) {
+                        erreurs.push({ kpiId: e.kpiId, annee: e.annee, error: err.message });
+                    }
+                }
+
+                if (erreurs.length === 0) {
+                    window.swalSuccess('Soumis', 'Toutes les lignes ont été enregistrées.');
+                    if (typeof chargerTableau === 'function') chargerTableau();
+                } else {
+                    const msgs = erreurs.map(x => `KPI ${x.kpiId} (${x.annee}): ${x.error}`).join('\n');
+                    window.swalError('Erreurs lors de la soumission', `Certaines lignes n'ont pas pu être enregistrées:\n${msgs}`);
+                }
+            };
+        })();
+    </script>
+
+    <!-- =====================================================================
+         AUTO-SELECTION DIRECTION + MENU KPI DYNAMIQUE
+         ===================================================================== -->
+    <script>
+    (function () {
+
+        var KPI_DIRECTION = {
+            "GT1PKI01":"SGM","GT1PKI02":"SGM","GT1PKI03":"DSI","GT1PKI04":"DSI",
+            "GT1PKI05":"DSI","GT1PKI06":"DSI","GT1PKI07":"SGM","GT1PKI08":"SGM",
+            "GT1PKI09":"DSI","GT1PKI10":"SGM","GT1PKI11":"SGM",
+            "GT1PKI12":"DPAF","GT1PKI13":"DPAF","GT1PKI14":"DPAF","GT1PKI15":"DPAF",
+            "GT2PKI01":"DGT","GT2PKI02":"DGT","GT2PKI04":"DGT","GT2PKI05":"DGT",
+            "GT2PKI06":"DGT","GT2PKI07":"DGT","GT2PKI08":"DGT","GT2PKI09":"DGT","GT2PKI10":"DGT",
+            "GT3PKI01":"DSI",
+            "GT3PKI02":"DGFP","GT3PKI03":"DGFP","GT3PKI04":"DGFP","GT3PKI05":"DGFP",
+            "GT3PKI06":"DGFP","GT3PKI07":"DGFP","GT3PKI08":"DGFP","GT3PKI09":"DGFP",
+            "GT3PKI10":"DGFP","GT3PKI11":"DGFP","GT3PKI12":"DGFP","GT3PKI13":"DGFP",
+            "GT3PKI14":"DGFP","GT3PKI15":"DGFP","GT3PKI16":"DGFP","GT3PKI17":"DGFP",
+            "GT3PKI18":"DGFP","GT3PKI19":"DGFP","GT3PKI20":"DGFP","GT3PKI21":"DGFP"
+        };
+
+        /* 1. AUTO-SELECTION direction */
+        document.addEventListener('DOMContentLoaded', function () {
+            var select = document.getElementById('direction-concernee');
+            var hint   = document.getElementById('direction-hint');
+            if (!select) return;
+
+            var urlMatch = window.location.pathname.match(/\/kpi\/(gt\d+pki\d+)/i);
+            if (!urlMatch) return;
+
+            var kpiCode   = urlMatch[1].toUpperCase();
+            var direction = KPI_DIRECTION[kpiCode];
+            if (!direction) return;
+
+            for (var i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === direction) { select.selectedIndex = i; break; }
+            }
+            for (var j = 0; j < select.options.length; j++) {
+                if (select.options[j].value !== direction && select.options[j].value !== '') {
+                    select.options[j].disabled = true;
+                    select.options[j].style.color = '#bbb';
+                }
+            }
+            select.style.background    = '#f0f7f2';
+            select.style.borderColor   = '#006633';
+            select.style.fontWeight    = '700';
+            select.style.color         = '#0d3b22';
+            select.style.pointerEvents = 'none';
+
+            if (hint) {
+                hint.style.display = 'block';
+                hint.innerHTML = '✅ Direction <strong>' + direction
+                    + '</strong> sélectionnée automatiquement pour le KPI '
+                    + kpiCode + '. Les autres options sont désactivées.';
+            }
+        });
+
+        /* 2. MENU KPI DYNAMIQUE */
+        document.addEventListener('DOMContentLoaded', function () {
+            var container = document.getElementById('kpi-menu-container');
+            if (!container) return;
+
+            fetch('/api/collecteur/kpis-menu')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.groupes || data.groupes.length === 0) {
+                        container.innerHTML = '<div class="kpi-menu-empty">⚠️ Aucun KPI accessible pour votre direction.</div>';
+                        return;
+                    }
+                    var html = '<div class="kpi-menu-header">'
+                        + '<span class="kpi-menu-badge">' + data.total + ' KPI' + (data.total > 1 ? 's' : '') + '</span>';
+                    if (data.role === 'collecteur' && data.structure) {
+                        html += '<span class="kpi-menu-dir">' + data.structure.replace(/,/g, ', ') + '</span>';
+                    }
+                    html += '</div>';
+
+                    data.groupes.forEach(function(groupe) {
+                        html += '<div class="kpi-menu-group"><div class="kpi-menu-group-label">' + groupe.label + '</div>';
+                        groupe.kpis.forEach(function(kpi) {
+                            var active = window.location.pathname === kpi.url ? ' kpi-menu-item--active' : '';
+                            html += '<a href="' + kpi.url + '" class="kpi-menu-item' + active + '">'
+                                + '<span class="kpi-menu-code">' + kpi.code + '</span>'
+                                + '<span class="kpi-menu-intitule">' + kpi.intitule + '</span>'
+                                + '</a>';
+                        });
+                        html += '</div>';
+                    });
+                    container.innerHTML = html;
+                })
+                .catch(function() {
+                    container.innerHTML = '<div class="kpi-menu-empty">Erreur de chargement.</div>';
+                });
+        });
+
+    })();
+    </script>
+
+    <style>
+        .kpi-menu-header{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid rgba(0,102,51,0.12);background:#f4f9f4}
+        .kpi-menu-badge{background:#006633;color:white;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px}
+        .kpi-menu-dir{font-size:11px;color:#5d7167;font-weight:600}
+        .kpi-menu-empty{padding:12px 16px;color:#e53935;font-size:.82rem}
+        .kpi-menu-group{padding:6px 0;border-bottom:1px solid rgba(0,0,0,0.05)}
+        .kpi-menu-group:last-child{border-bottom:none}
+        .kpi-menu-group-label{padding:6px 14px 3px;font-size:10px;font-weight:800;color:#ff8c00;text-transform:uppercase;letter-spacing:.6px}
+        .kpi-menu-item{display:flex;align-items:flex-start;gap:10px;padding:8px 14px;text-decoration:none;color:inherit;transition:background .15s}
+        .kpi-menu-item:hover{background:#f0f7f2}
+        .kpi-menu-item--active{background:#e8f5e9}
+        .kpi-menu-code{font-size:11px;font-weight:800;color:#006633;white-space:nowrap;flex-shrink:0;padding-top:1px}
+        .kpi-menu-intitule{font-size:12px;color:#354a3e;line-height:1.4}
+        #direction-hint{padding:6px 10px;background:#e8f5e9;border-radius:6px;border-left:3px solid #2e7d32;color:#1b5e20;font-weight:500;font-size:.8rem}
+    </style>
+</body>
+</html>

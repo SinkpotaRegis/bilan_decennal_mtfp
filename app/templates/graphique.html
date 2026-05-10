@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block title %}Graphiques - Évolution des KPIs{% endblock %}
+
+{% block extra_css %}
+<style>
+    .selector-container {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .selector-container h3 {
+        color: #006633;
+        margin-bottom: 15px;
+    }
+    select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        background: white;
+        cursor: pointer;
+    }
+    select:focus {
+        outline: none;
+        border-color: #006633;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    canvas {
+        max-height: 450px;
+        width: 100%;
+    }
+    
+    .kpi-info {
+        background: #e8f5e9;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    .info-card {
+        text-align: center;
+        padding: 10px;
+    }
+    .info-label {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 5px;
+    }
+    .info-value {
+        font-size: 20px;
+        font-weight: bold;
+        color: #006633;
+    }
+    .info-value.tcac {
+        color: #27ae60;
+        font-size: 28px;
+    }
+    
+    /* Section analyse détaillée */
+    .analyse-detaillee {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .analyse-detaillee h3 {
+        color: #006633;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #FFD700;
+    }
+    .analyse-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+    .analyse-card {
+        background: #f9f9f9;
+        border-radius: 10px;
+        padding: 15px;
+        border-left: 4px solid #006633;
+    }
+    .analyse-card h4 {
+        color: #006633;
+        margin-bottom: 10px;
+        font-size: 16px;
+    }
+    .analyse-card p {
+        font-size: 13px;
+        line-height: 1.5;
+        color: #333;
+        white-space: pre-line;
+    }
+    
+    .footer {
+        text-align: center;
+        margin-top: 30px;
+        color: #666;
+        font-size: 12px;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 50px;
+        color: #666;
+    }
+    
+    @media (max-width: 768px) {
+        .kpi-info {
+            grid-template-columns: 1fr;
+        }
+        .analyse-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="selector-container">
+    <h3>📌 Sélectionner un indicateur</h3>
+    <select id="kpiSelect">
+        <option value="">Chargement des indicateurs...</option>
+    </select>
+</div>
+
+<div class="chart-container">
+    <canvas id="evolutionChart"></canvas>
+    <div id="kpiInfo" class="kpi-info">
+        <div class="info-card">
+            <div class="info-label">Sélectionnez un indicateur</div>
+            <div class="info-value">---</div>
+        </div>
+    </div>
+</div>
+
+<div class="analyse-detaillee" id="analyseDetaillee" style="display: none;">
+    <h3>📋 Analyse détaillée</h3>
+    <div class="analyse-grid">
+        <div class="analyse-card">
+            <h4>📌 Facteurs explicatifs</h4>
+            <p id="facteurs">Chargement...</p>
+        </div>
+        <div class="analyse-card">
+            <h4>📊 Benchmarking</h4>
+            <p id="benchmarking">Chargement...</p>
+        </div>
+        <div class="analyse-card">
+            <h4>💡 Recommandations</h4>
+            <p id="recommandations">Chargement...</p>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let chart;
+    let annees = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+    
+    async function chargerIndicateurs() {
+        try {
+            const response = await fetch('/api/kpis');
+            const kpis = await response.json();
+            
+            const select = document.getElementById('kpiSelect');
+            select.innerHTML = '<option value="">-- Choisir un indicateur --</option>';
+            
+            kpis.sort((a, b) => a.groupe_id - b.groupe_id);
+            
+            let currentGroupe = '';
+            for (let k of kpis) {
+                let groupeNom = '';
+                if (k.groupe_id === 1) groupeNom = '🏭 Travail et Sécurité Sociale';
+                else if (k.groupe_id === 2) groupeNom = '👥 Fonction Publique';
+                else groupeNom = '⚙️ Gouvernance et Réformes';
+                
+                if (groupeNom !== currentGroupe) {
+                    currentGroupe = groupeNom;
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = currentGroupe;
+                    select.appendChild(optgroup);
+                }
+                
+                const option = document.createElement('option');
+                option.value = k.id;
+                option.textContent = `${k.indicateur}`;
+                select.lastChild.appendChild(option);
+            }
+            
+            select.onchange = () => {
+                if (select.value) {
+                    chargerGraphique(select.value);
+                    chargerAnalyse(select.value);
+                }
+            };
+        } catch (error) {
+            console.error('Erreur:', error);
+            document.getElementById('kpiSelect').innerHTML = '<option>Erreur de chargement</option>';
+        }
+    }
+    
+    async function chargerAnalyse(id) {
+        try {
+            const response = await fetch(`/api/kpis/analyse/${id}`);
+            const data = await response.json();
+            
+            document.getElementById('facteurs').innerHTML = data.facteurs_explicatifs || 'Non renseigné';
+            document.getElementById('benchmarking').innerHTML = data.benchmarking || 'Non renseigné';
+            document.getElementById('recommandations').innerHTML = data.recommandations || 'Non renseigné';
+            document.getElementById('analyseDetaillee').style.display = 'block';
+        } catch (error) {
+            console.error('Erreur chargement analyse:', error);
+            document.getElementById('analyseDetaillee').style.display = 'none';
+        }
+    }
+    
+    async function chargerGraphique(id) {
+        try {
+            const kpisRes = await fetch('/api/kpis');
+            const kpis = await kpisRes.json();
+            const kpi = kpis.find(k => k.id == id);
+            
+            if (!kpi) return;
+            
+            const response = await fetch(`/api/kpis/annuel/${id}`);
+            const data = await response.json();
+            
+            const valeurs = [];
+            for (let annee of annees) {
+                const item = data.find(d => d.annee === annee);
+                valeurs.push(item ? item.valeur : 0);
+            }
+            
+            const valeurDebut = valeurs[0];
+            const valeurFin = valeurs[valeurs.length - 1];
+            let tcac = null;
+            let evolutionTotale = null;
+            
+            if (valeurDebut > 0 && valeurFin > 0) {
+                tcac = ((valeurFin / valeurDebut) ** (1 / (annees.length - 1)) - 1) * 100;
+                evolutionTotale = ((valeurFin - valeurDebut) / valeurDebut) * 100;
+            }
+            
+            if (chart) chart.destroy();
+            
+            const ctx = document.getElementById('evolutionChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: annees,
+                    datasets: [{
+                        label: kpi.indicateur,
+                        data: valeurs,
+                        borderColor: '#006633',
+                        backgroundColor: 'rgba(0,102,51,0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#006633',
+                        pointBorderColor: 'white',
+                        pointRadius: 6,
+                        pointHoverRadius: 9,
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.raw.toFixed(2)}%`;
+                                }
+                            }
+                        },
+                        legend: {
+                            position: 'top',
+                            labels: { font: { size: 12 } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            title: { display: true, text: `Taux d'atteinte (%)`, font: { size: 12 } },
+                            beginAtZero: true,
+                            max: 100,
+                            grid: { color: '#ecf0f1' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Année', font: { size: 12 } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+            
+            let statutClass = '';
+            let statutTexte = '';
+            const dernierTaux = valeurs[valeurs.length-1];
+            if (dernierTaux >= 80) {
+                statutTexte = '✅ Bon';
+            } else if (dernierTaux >= 40) {
+                statutTexte = '⚠️ Moyen';
+            } else {
+                statutTexte = '🔴 Critique';
+            }
+            
+            document.getElementById('kpiInfo').innerHTML = `
+                <div class="info-card">
+                    <div class="info-label">📊 Indicateur</div>
+                    <div class="info-value" style="font-size:14px;">${kpi.indicateur}</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-label">🎯 Objectif cible 2026</div>
+                    <div class="info-value">${kpi.valeur_cible} ${kpi.unite || '%'}</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-label">📈 Valeur 2026</div>
+                    <div class="${statutClass}">${dernierTaux.toFixed(1)}%</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-label">📈 Valeur 2016</div>
+                    <div class="info-value">${valeurs[0].toFixed(1)}%</div>
+                </div>
+                ${tcac !== null ? `
+                <div class="info-card">
+                    <div class="info-label">📊 TCAC (2016-2026)</div>
+                    <div class="info-value tcac">${tcac.toFixed(2)}%</div>
+                </div>
+                ` : ''}
+                ${evolutionTotale !== null ? `
+                <div class="info-card">
+                    <div class="info-label">📈 Évolution totale</div>
+                    <div class="info-value ${evolutionTotale >= 0 ? 'tcac' : ''}" style="color:${evolutionTotale >= 0 ? '#27ae60' : '#e74c3c'}">
+                        ${evolutionTotale >= 0 ? '+' : ''}${evolutionTotale.toFixed(1)}%
+                    </div>
+                </div>
+                ` : ''}
+            `;
+            
+        } catch (error) {
+            console.error('Erreur:', error);
+            document.getElementById('kpiInfo').innerHTML = `<div style="color:red; text-align:center;">Erreur de chargement: ${error.message}</div>`;
+        }
+    }
+    
+    // Démarrer le chargement des indicateurs
+    chargerIndicateurs();
+</script>
+{% endblock %}

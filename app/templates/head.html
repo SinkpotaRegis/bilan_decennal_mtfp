@@ -1,0 +1,89 @@
+<!-- head.html - Métadonnées et styles communs -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Bilan Décennal MTFP{% endblock %}</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; }
+
+    .header {
+        background: linear-gradient(135deg, #006633 0%, #008844 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+        border-radius: 15px;
+        margin-bottom: 20px;
+    }
+    .header h1 { font-size: 28px; margin-bottom: 10px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+
+    /* Menu de navigation */
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .nav {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .nav a {
+        background: white;
+        padding: 12px 25px;
+        text-decoration: none;
+        border-radius: 10px;
+        color: #006633;
+        font-weight: bold;
+        transition: all 0.3s;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .nav a:hover, .nav a.active {
+        background: #006633;
+        color: white;
+    }
+    .user-info {
+        background: white;
+        padding: 8px 20px;
+        border-radius: 30px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .user-name {
+        font-weight: bold;
+        color: #006633;
+    }
+    .logout-btn {
+        background: #e74c3c;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        text-decoration: none;
+        font-size: 13px;
+    }
+    .logout-btn:hover {
+        background: #c0392b;
+    }
+
+    .footer {
+        background: #2c3e50;
+        color: white;
+        text-align: center;
+        padding: 20px;
+        margin-top: 30px;
+        border-radius: 10px;
+        font-size: 12px;
+    }
+
+    @media (max-width: 768px) {
+        .top-bar { flex-direction: column; align-items: stretch; }
+        .nav { justify-content: center; }
+        .user-info { justify-content: center; }
+    }
+</style>

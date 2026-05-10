@@ -1,0 +1,524 @@
+<!-- header.html — Navigation avec menu KPI dynamique filtré par direction -->
+{% set user_role = current_user.role|lower %}
+<style>
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        background: linear-gradient(135deg, #0d2b1f 0%, #1a4a2a 50%, #0d2b1f 100%);
+        padding: 14px 30px;
+        color: white;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .nav {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .nav-link, .logout-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        padding: 0 18px;
+        border-radius: 9px;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.25s ease;
+        white-space: nowrap;
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+    .nav-link {
+        color: white;
+        background: rgba(255,255,255,0.06);
+    }
+    .nav-link:hover, .nav-link.active {
+        background: linear-gradient(135deg, #ff8c00, #ff6b00);
+        border-color: transparent;
+        box-shadow: 0 8px 18px rgba(255,140,0,0.28);
+        transform: translateY(-2px);
+    }
+
+    /* ── Bouton déclencheur menu KPI ── */
+    .kpi-dropdown-wrap {
+        position: relative;
+        display: inline-flex;
+    }
+    .kpi-trigger-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        padding: 0 18px;
+        border-radius: 9px;
+        font-size: 14px;
+        font-weight: 500;
+        color: white;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.2);
+        cursor: pointer;
+        font-family: inherit;
+        transition: all 0.25s ease;
+        white-space: nowrap;
+    }
+    .kpi-trigger-btn:hover, .kpi-trigger-btn.open {
+        background: linear-gradient(135deg, #ff8c00, #ff6b00);
+        border-color: transparent;
+        box-shadow: 0 8px 18px rgba(255,140,0,0.28);
+        transform: translateY(-2px);
+    }
+    .kpi-trigger-chevron {
+        font-size: 10px;
+        transition: transform 0.25s;
+    }
+    .kpi-trigger-btn.open .kpi-trigger-chevron {
+        transform: rotate(180deg);
+    }
+
+    /* ── Panneau dropdown ── */
+    .kpi-panel {
+        display: none;
+        position: absolute;
+        top: calc(100% + 10px);
+        left: 0;
+        width: 440px;
+        max-height: 540px;
+        overflow-y: auto;
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.22);
+        border: 1px solid rgba(0,102,51,0.1);
+        z-index: 9999;
+        animation: panelIn 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+    .kpi-panel.open { display: block; }
+    .kpi-panel::-webkit-scrollbar { width: 5px; }
+    .kpi-panel::-webkit-scrollbar-thumb { background: #a5d6a7; border-radius: 5px; }
+
+    @keyframes panelIn {
+        from { opacity: 0; transform: translateY(-12px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Header du panneau ── */
+    .kpi-panel-header {
+        padding: 16px 20px;
+        background: linear-gradient(135deg, #1a472a, #2d6a4f);
+        color: white;
+        border-radius: 18px 18px 0 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .kpi-panel-header-title {
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+    .kpi-panel-header-sub {
+        font-size: 11px;
+        opacity: 0.75;
+        margin-top: 3px;
+    }
+    .kpi-count-badge {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 20px;
+    }
+
+    /* ── État chargement ── */
+    .kpi-panel-loading {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 24px 20px;
+        color: #888;
+        font-size: 13px;
+    }
+    .kpi-dot-anim {
+        width: 8px; height: 8px;
+        background: #006633;
+        border-radius: 50%;
+        animation: dotBlink 1s ease-in-out infinite;
+        flex-shrink: 0;
+    }
+    @keyframes dotBlink {
+        0%,100% { opacity:.3; transform:scale(.8); }
+        50%      { opacity:1;  transform:scale(1.2); }
+    }
+
+    /* ── Groupe thématique ── */
+    .kpi-groupe-section { border-bottom: 1px solid #eef2f0; }
+    .kpi-groupe-section:last-child { border-bottom: none; }
+
+    .kpi-groupe-toggle {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        padding: 13px 20px;
+        background: white;
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 700;
+        color: #1a472a;
+        text-align: left;
+        transition: background 0.2s;
+        font-family: inherit;
+    }
+    .kpi-groupe-toggle:hover { background: #f4faf4; }
+    .kpi-groupe-toggle.open  { background: #f0f7f2; }
+
+    .kpi-groupe-left { display: flex; align-items: center; gap: 10px; }
+    .kpi-groupe-icon { font-size: 18px; }
+    .kpi-groupe-nb {
+        font-size: 10px;
+        background: #e8f0e6;
+        color: #2d6a4f;
+        padding: 2px 7px;
+        border-radius: 20px;
+        font-weight: 700;
+    }
+    .kpi-groupe-arrow {
+        font-size: 11px;
+        color: #aaa;
+        transition: transform 0.25s, color 0.2s;
+    }
+    .kpi-groupe-toggle.open .kpi-groupe-arrow {
+        transform: rotate(180deg);
+        color: #ff8c00;
+    }
+
+    /* ── Liste des KPIs dans un groupe ── */
+    .kpi-items-list {
+        display: none;
+        background: #fafdf8;
+        border-top: 1px solid #eef2f0;
+    }
+    .kpi-items-list.open { display: block; animation: slideDown 0.2s ease; }
+    @keyframes slideDown {
+        from { opacity:0; transform:translateY(-6px); }
+        to   { opacity:1; transform:translateY(0); }
+    }
+
+    .kpi-item-link {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 11px 20px 11px 28px;
+        text-decoration: none;
+        color: #2c3e2f;
+        border-bottom: 1px solid #eef2f0;
+        transition: all 0.18s ease;
+        font-size: 13px;
+    }
+    .kpi-item-link:last-child { border-bottom: none; }
+    .kpi-item-link:hover {
+        background: linear-gradient(90deg, #e8f5e9, #fff);
+        padding-left: 34px;
+    }
+    .kpi-item-link.active { background: #e8f5e9; }
+
+    .kpi-item-code {
+        background: linear-gradient(135deg, #2d6a4f, #1a472a);
+        color: white;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 12px;
+        white-space: nowrap;
+        font-family: 'Courier New', monospace;
+        flex-shrink: 0;
+        letter-spacing: 0.5px;
+        margin-top: 1px;
+        transition: background 0.18s;
+    }
+    .kpi-item-link:hover .kpi-item-code {
+        background: linear-gradient(135deg, #ff8c00, #ff6b00);
+    }
+    .kpi-item-label {
+        flex: 1;
+        line-height: 1.4;
+        color: #2c3e2f;
+    }
+
+    /* ── Vide ── */
+    .kpi-panel-empty {
+        padding: 30px 20px;
+        text-align: center;
+        color: #888;
+        font-size: 13px;
+    }
+
+    /* ── User info ── */
+    .role-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    .role-pill.collecteur { background: linear-gradient(135deg, #2d6a4f, #1a472a); }
+    .role-pill.validateur { background: linear-gradient(135deg, #1f5f8b, #173a54); }
+    .role-pill.admin      { background: linear-gradient(135deg, #8e5a19, #5f3d11); }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        background: rgba(255,255,255,0.08);
+        padding: 6px 20px;
+        border-radius: 40px;
+        backdrop-filter: blur(5px);
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+    .user-info span { font-size: 13px; }
+    .user-name { font-weight: bold; color: #ffd966; }
+
+    .logout-btn {
+        color: white;
+        background: rgba(231,76,60,0.9);
+        font-size: 13px;
+        font-weight: 500;
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+    .logout-btn:hover {
+        background: #e74c3c;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px rgba(231,76,60,0.3);
+    }
+
+    @media (max-width: 900px) {
+        .top-bar { flex-direction: column; gap: 15px; padding: 12px 20px; }
+        .nav { justify-content: center; }
+        .kpi-panel { width: 340px; }
+        .user-info { justify-content: center; }
+    }
+    @media (max-width: 480px) {
+        .kpi-panel { width: 300px; }
+    }
+</style>
+
+<div class="top-bar">
+    <div class="nav">
+
+        {% if user_role == 'collecteur' %}
+            <a href="{{ url_for('api.collecteur_dashboard') }}" class="nav-link {% if active_page == 'collecteur_dashboard' %}active{% endif %}">Tableau de bord</a>
+            <a href="{{ url_for('api.collecteur_recap_soumissions') }}" class="nav-link {% if active_page == 'collecteur_recap_soumissions' %}active{% endif %}">Récap. soumissions</a>
+        {% elif user_role == 'validateur' %}
+            <a href="{{ url_for('api.validateur_dashboard') }}" class="nav-link {% if active_page == 'validateur_dashboard' %}active{% endif %}">Tableau de bord</a>
+            <a href="{{ url_for('api.validateur_recap_soumissions') }}" class="nav-link {% if active_page == 'validateur_recap_soumissions' %}active{% endif %}">Récap. soumissions</a>
+            <a href="{{ url_for('api.graphique') }}" class="nav-link {% if active_page == 'graphique' %}active{% endif %}">Suivi des tendances</a>
+        {% else %}
+            <a href="{{ url_for('api.dashboard') }}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">📊 Tableau de bord</a>
+            <a href="{{ url_for('api.graphique') }}" class="nav-link {% if active_page == 'graphique' %}active{% endif %}">📈 Graphiques</a>
+            <a href="{{ url_for('api.rapport_codir') }}" class="nav-link {% if active_page == 'rapport_codir' %}active{% endif %}">📋 Rapport CODIR</a>
+        {% endif %}
+
+        <!-- ══ MENU CHOIX DU KPI — dynamique selon direction ══ -->
+        <div class="kpi-dropdown-wrap" id="kpiDropdownWrap">
+
+            <button type="button" class="kpi-trigger-btn" id="kpiTriggerBtn">
+                📊 Choix du KPI
+                <i class="fas fa-chevron-down kpi-trigger-chevron" id="kpiTriggerChevron"></i>
+            </button>
+
+            <div class="kpi-panel" id="kpiPanel">
+
+                <!-- Header du panneau -->
+                <div class="kpi-panel-header">
+                    <div>
+                        <div class="kpi-panel-header-title">Indicateurs de performance</div>
+                        <div class="kpi-panel-header-sub" id="kpiPanelSub">
+                            {% if user_role == 'admin' %}
+                                Tous les KPIs — Accès complet
+                            {% else %}
+                                Filtré selon votre direction affectée
+                            {% endif %}
+                        </div>
+                    </div>
+                    <span class="kpi-count-badge" id="kpiCountBadge">…</span>
+                </div>
+
+                <!-- Corps — rempli par JS -->
+                <div id="kpiPanelBody">
+                    <div class="kpi-panel-loading">
+                        <span class="kpi-dot-anim"></span>
+                        Chargement des indicateurs…
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <!-- ══ FIN MENU KPI ══ -->
+
+    </div>
+
+    <div class="user-info">
+        <span>👤 <span class="user-name">{{ current_user.username }}</span></span>
+        <span>🏢 {{ current_user.structure or 'MTFP' }}</span>
+        <span class="role-pill {{ user_role }}">⭐ {{ current_user.role }}</span>
+        <a href="/logout" class="logout-btn">Déconnexion</a>
+    </div>
+</div>
+
+<script>
+(function () {
+
+    var trigger = document.getElementById('kpiTriggerBtn');
+    var panel   = document.getElementById('kpiPanel');
+    var body    = document.getElementById('kpiPanelBody');
+    var badge   = document.getElementById('kpiCountBadge');
+
+    var loaded  = false;   // on charge une seule fois
+    var groupesOpen = {};  // état ouvert/fermé de chaque groupe
+
+    if (!trigger || !panel) return;
+
+    /* ── Ouvrir / fermer ── */
+    trigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var isOpen = panel.classList.contains('open');
+        panel.classList.toggle('open', !isOpen);
+        trigger.classList.toggle('open', !isOpen);
+
+        if (!isOpen && !loaded) {
+            chargerKpis();
+        }
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!trigger.contains(e.target) && !panel.contains(e.target)) {
+            panel.classList.remove('open');
+            trigger.classList.remove('open');
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            panel.classList.remove('open');
+            trigger.classList.remove('open');
+        }
+    });
+
+    /* ── Charger les KPIs depuis l'API ── */
+    function chargerKpis() {
+        fetch('/api/collecteur/kpis-menu')
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function (data) {
+                loaded = true;
+                badge.textContent = data.total + ' KPI' + (data.total > 1 ? 's' : '');
+
+                if (!data.groupes || data.groupes.length === 0) {
+                    body.innerHTML = '<div class="kpi-panel-empty">⚠️ Aucun KPI accessible pour votre direction.</div>';
+                    return;
+                }
+
+                var html = '';
+                var ICONES = { 'GT1': '🏛️', 'GT2': '💼', 'GT3': '👤' };
+
+                data.groupes.forEach(function (groupe, gi) {
+                    var gtCode = 'gt' + gi;
+                    // Déterminer le code GT depuis le label
+                    if (groupe.label.includes('Gouvernance')) gtCode = 'gt1';
+                    else if (groupe.label.includes('Travail'))    gtCode = 'gt2';
+                    else if (groupe.label.includes('Fonction'))   gtCode = 'gt3';
+
+                    var icone = ICONES[gtCode.toUpperCase().replace('GT', 'GT')] || '📊';
+                    if (gtCode === 'gt1') icone = '🏛️';
+                    else if (gtCode === 'gt2') icone = '💼';
+                    else if (gtCode === 'gt3') icone = '👤';
+
+                    html += '<div class="kpi-groupe-section">';
+                    html += '<button type="button" class="kpi-groupe-toggle" '
+                          + 'data-gt="' + gtCode + '" '
+                          + 'onclick="toggleGroupe(this)">'
+                          + '<span class="kpi-groupe-left">'
+                          + '<span class="kpi-groupe-icon">' + icone + '</span>'
+                          + '<span>' + groupe.label + '</span>'
+                          + '<span class="kpi-groupe-nb">' + groupe.kpis.length + '</span>'
+                          + '</span>'
+                          + '<i class="fas fa-chevron-down kpi-groupe-arrow"></i>'
+                          + '</button>';
+                    html += '<div class="kpi-items-list" id="kpi-items-' + gtCode + '">';
+
+                    groupe.kpis.forEach(function (kpi) {
+                        var isActive = window.location.pathname === kpi.url ? ' active' : '';
+                        html += '<a href="' + kpi.url + '" class="kpi-item-link' + isActive + '">'
+                              + '<span class="kpi-item-code">' + kpi.code + '</span>'
+                              + '<span class="kpi-item-label">' + kpi.intitule + '</span>'
+                              + '</a>';
+                    });
+
+                    html += '</div></div>';
+                });
+
+                body.innerHTML = html;
+
+                /* Ouvrir automatiquement le groupe du KPI actif */
+                var activeLink = body.querySelector('.kpi-item-link.active');
+                if (activeLink) {
+                    var parentList = activeLink.closest('.kpi-items-list');
+                    if (parentList) {
+                        parentList.classList.add('open');
+                        var btn = parentList.previousElementSibling;
+                        if (btn) btn.classList.add('open');
+                    }
+                }
+            })
+            .catch(function (err) {
+                loaded = false;
+                body.innerHTML = '<div class="kpi-panel-empty">❌ Erreur de chargement.<br><small>' + err.message + '</small></div>';
+            });
+    }
+
+    /* ── Toggle groupe ── */
+    window.toggleGroupe = function (btn) {
+        var gt   = btn.dataset.gt;
+        var list = document.getElementById('kpi-items-' + gt);
+        if (!list) return;
+
+        var isOpen = list.classList.contains('open');
+
+        /* Fermer tous les autres groupes */
+        document.querySelectorAll('.kpi-items-list').forEach(function (l) {
+            l.classList.remove('open');
+        });
+        document.querySelectorAll('.kpi-groupe-toggle').forEach(function (b) {
+            b.classList.remove('open');
+        });
+
+        if (!isOpen) {
+            list.classList.add('open');
+            btn.classList.add('open');
+        }
+    };
+
+    /* Empêcher la fermeture du panel au clic sur les liens KPI */
+    panel.addEventListener('click', function (e) {
+        e.stopPropagation();
+    });
+
+})();
+</script>

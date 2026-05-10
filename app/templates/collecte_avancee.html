@@ -1,0 +1,851 @@
+{% extends "base.html" %}
+
+{% block title %}Collecte annuelle - Bilan Décennal MTFP{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Menu de navigation rapide */
+    .quick-nav {
+        position: fixed;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: white;
+        border-radius: 30px;
+        padding: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .quick-nav a {
+        background: #006633;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 25px;
+        text-decoration: none;
+        font-size: 12px;
+        text-align: center;
+        transition: 0.3s;
+        min-width: 100px;
+    }
+    .quick-nav a:hover {
+        background: #008844;
+        transform: scale(1.05);
+    }
+    .quick-nav .back-to-top {
+        background: #e74c3c;
+        margin-top: 10px;
+    }
+    .quick-nav .back-to-top:hover {
+        background: #c0392b;
+    }
+
+    .accordion {
+        background: white;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    .accordion-header {
+        background: #006633;
+        color: white;
+        padding: 15px 20px;
+        cursor: pointer;
+        font-size: 18px;
+        font-weight: bold;
+        display: flex;
+        justify-content: space-between;
+    }
+    .accordion-content {
+        max-height: 0;
+        overflow-y: auto;
+        transition: max-height 0.3s ease-out;
+        background: #f9f9f9;
+    }
+    .accordion-content.actif {
+        max-height: 650px;
+        overflow-y: auto;
+    }
+    .accordion-content.actif::-webkit-scrollbar {
+        width: 8px;
+    }
+    .accordion-content.actif::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    .accordion-content.actif::-webkit-scrollbar-thumb {
+        background: #006633;
+        border-radius: 10px;
+    }
+    .accordion-inner { padding: 20px; }
+
+    .kpi-card {
+        background: white;
+        border-left: 4px solid #006633;
+        padding: 20px;
+        margin: 15px 0;
+        border-radius: 8px;
+    }
+    .kpi-title {
+        font-weight: bold;
+        font-size: 18px;
+        margin-bottom: 10px;
+        color: #006633;
+    }
+    .periode {
+        background: #e8f5e9;
+        padding: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+        font-size: 14px;
+        font-weight: bold;
+        text-align: center;
+    }
+    .annee-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 15px 0;
+        font-size: 13px;
+    }
+    .annee-table th, .annee-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: center;
+    }
+    .annee-table th {
+        background: #006633;
+        color: white;
+        font-weight: bold;
+    }
+    .annee-table input {
+        width: 100px;
+        padding: 5px;
+        text-align: center;
+    }
+    .annee-table input:disabled {
+        background: #f0f0f0;
+        color: #999;
+    }
+    .annee-table textarea {
+        width: 150px;
+        padding: 5px;
+        font-size: 11px;
+    }
+    .annee-table textarea:disabled {
+        background: #f0f0f0;
+        color: #999;
+    }
+    .btn-save-annee {
+        background: #27ae60;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 11px;
+    }
+    .btn-save-annee:hover { background: #219a52; }
+    .btn-modify-annee {
+        background: #f39c12;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 11px;
+    }
+    .btn-modify-annee:hover { background: #e67e22; }
+    .btn-delete-annee {
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 11px;
+        margin-left: 5px;
+    }
+    .btn-delete-annee:hover { background: #c0392b; }
+    .btn-add-file {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 5px 8px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 11px;
+        margin-top: 5px;
+    }
+    .btn-add-file:hover { background: #2980b9; }
+    .btn-add-file:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+    .success { background: #d5f5e3; color: #27ae60; padding: 10px; border-radius: 5px; margin: 10px 0; display: none; }
+    .commentaire-cell { max-width: 180px; }
+    .commentaire-cell textarea { width: 100%; }
+    .row-saved { background-color: #e8f5e9; }
+    .cible-cell { font-weight: bold; color: #006633; }
+    .variation-positif { color: #27ae60; font-weight: bold; }
+    .variation-negatif { color: #e74c3c; font-weight: bold; }
+    .stats-row { background-color: #f0f7f0; font-weight: bold; }
+    .files-list ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .files-list li {
+        background: #f1f9f1;
+        padding: 2px 5px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-bottom: 3px;
+        font-size: 12px;
+    }
+    .files-list a {
+        text-decoration: none;
+        color: #006633;
+        font-weight: bold;
+    }
+    .files-list span.retirer-fichier {
+        cursor: pointer;
+        color: #e74c3c;
+        margin-left: auto;
+    }
+
+    @media (max-width: 768px) {
+        .quick-nav { display: none; }
+        .annee-table { font-size: 11px; }
+        .annee-table input, .annee-table textarea { width: 60px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div id="successMsg" class="success">✅ Données enregistrées !</div>
+<div id="contenu"></div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let annees = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+
+    function normaliserTexte(valeur) {
+        return (valeur || '')
+            .toString()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function obtenirLibelleResultat(kpi) {
+        const formule = normaliserTexte(kpi.formule_type);
+        const indicateur = normaliserTexte(kpi.indicateur);
+        const unite = normaliserTexte(kpi.unite);
+
+        if (formule === 'pourcentage') {
+            return indicateur.includes('taux') ? 'Taux' : 'Pourcentage';
+        }
+        if (formule === 'ratio') return 'Ratio';
+        if (formule === 'somme') return 'Nombre';
+        if (formule === 'moyenne') {
+            if (indicateur.includes('delai') || unite.includes('jour')) return 'Délai moyen';
+            return 'Moyenne';
+        }
+        if (formule === 'score_externe' || indicateur.includes('indice')) return 'Indice';
+        if (indicateur.includes('nombre')) return 'Nombre';
+        if (indicateur.includes('delai')) return 'Délai moyen';
+        return 'Résultat';
+    }
+
+    function aUneSeuleVariable(kpi) {
+        const formule = normaliserTexte(kpi.formule_type);
+        return formule === 'somme' || formule === 'score_externe' || formule === 'cumul_annuel';
+    }
+
+    function libelleVariableUnique(kpi) {
+        const code = normaliserTexte(kpi.code);
+        const indicateur = normaliserTexte(kpi.indicateur);
+        const libelle = obtenirLibelleResultat(kpi);
+        if (code === 'gt3pki08' || indicateur.includes('pieces du dossier de retraite')) return 'Nombre';
+        if (libelle === 'Indice') return 'Indice';
+        if (libelle === 'Nombre') return kpi.numerateur_label || 'Nombre';
+        return kpi.numerateur_label || 'Variable';
+    }
+
+    function avecColonneSansResultat(kpi) {
+        const code = normaliserTexte(kpi.code);
+        // Ces KPI: retirer la colonne de résultat, garder seulement la colonne d'input
+        // GT1: GT1PKI10
+        // GT2: GT2PKI01, GT2PKI02
+        // GT3: GT3PKI08, GT3PKI11, GT3PKI14, GT3PKI16
+        return code === 'gt1pki10' || code === 'gt2pki01' || code === 'gt2pki02' || code === 'gt3pki08' || code === 'gt3pki11' || code === 'gt3pki14' || code === 'gt3pki16';
+    }
+
+    function formaterValeurResultat(valeur, kpi) {
+        const formule = normaliserTexte(kpi.formule_type);
+        const unite = kpi.unite || '';
+        const nombre = Number(valeur) || 0;
+        const libelle = obtenirLibelleResultat(kpi);
+
+        if (formule === 'pourcentage') {
+            return `${nombre.toFixed(2)}%`;
+        }
+        if (libelle === 'Ratio') {
+            return nombre.toFixed(2);
+        }
+        if (libelle === 'Indice') {
+            return `${nombre.toFixed(2)}/100`;
+        }
+        if (libelle === 'Délai moyen') {
+            return `${nombre.toFixed(2)} ${unite}`.trim();
+        }
+        if (libelle === 'Nombre') {
+            return `${Math.round(nombre)} ${unite}`.trim();
+        }
+        return `${nombre.toFixed(2)} ${unite}`.trim();
+    }
+
+    async function chargerKPIs() {
+        const response = await fetch('/api/kpis');
+        const kpis = await response.json();
+
+        const groupesRes = await fetch('/api/groupes');
+        const groupes = await groupesRes.json();
+
+        let html = '';
+
+        for (let g of groupes) {
+            const kpisGroupe = kpis.filter(k => k.groupe_id === g.id);
+            if (kpisGroupe.length === 0) continue;
+
+            html += `
+                <div class="accordion" id="groupe${g.id}">
+                    <div class="accordion-header" onclick="toggleAccordion(${g.id})">
+                        <span>📌 ${g.nom} (${kpisGroupe.length} indicateurs)</span>
+                        <span>▼</span>
+                    </div>
+                    <div class="accordion-content" id="content-${g.id}">
+                        <div class="accordion-inner" id="inner-${g.id}">
+                            Chargement...
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        document.getElementById('contenu').innerHTML = html;
+
+        for (let g of groupes) {
+            const kpisGroupe = kpis.filter(k => k.groupe_id === g.id);
+            if (kpisGroupe.length === 0) continue;
+
+            let innerHtml = '';
+            for (let k of kpisGroupe) {
+                const libelleResultat = obtenirLibelleResultat(k);
+                const variableUnique = aUneSeuleVariable(k);
+                const sansColumnResultat = avecColonneSansResultat(k);
+                const libelleVariable = libelleVariableUnique(k);
+                const libelleFormule = variableUnique
+                    ? `📐 Valeur saisie: ${libelleVariable}`
+                    : `📐 Formule: (${k.numerateur_label || 'Numérateur'} / ${k.denominateur_label || 'Dénominateur'}) × 100`;
+                
+                let entetes = `<th>Année</th>`;
+                if (variableUnique) {
+                    entetes += `<th>${libelleVariable} <span style="color:red;">*</span></th>`;
+                } else {
+                    entetes += `<th>${k.numerateur_label || 'Numérateur'} <span style="color:red;">*</span></th>
+                                 <th>${k.denominateur_label || 'Dénominateur'} <span style="color:red;">*</span></th>`;
+                }
+                
+                // Ajouter colonne résultat seulement si ce n'est pas un des 4 KPI GT3
+                if (!sansColumnResultat) {
+                    entetes += `<th>${libelleResultat}</th>`;
+                }
+                
+                entetes += `<th>Valeur cible</th>
+                             <th>Commentaire <span style="color:red;">*</span></th>
+                             <th>Document preuve <span style="color:red;">*</span></th>
+                             <th>Action</th>`;
+                
+                const colsCount = sansColumnResultat ? (variableUnique ? 7 : 8) : (variableUnique ? 8 : 9);
+                
+                innerHtml += `
+                    <div class="kpi-card" id="kpi-${k.id}">
+                        <div class="kpi-title">📊 ${k.indicateur}</div>
+                        <div class="periode">🎯 Objectif cible 2026: ${k.valeur_cible} ${k.unite || ''}</div>
+                        <div>${libelleFormule}</div>
+                        <table class="annee-table" id="table-${k.id}">
+                            <thead>
+                                <tr>
+                                    ${entetes}
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-${k.id}">
+                                <tr><td colspan="${colsCount}">Chargement...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            document.getElementById(`inner-${g.id}`).innerHTML = innerHtml;
+
+            for (let k of kpisGroupe) {
+                chargerDonneesAnnuelles(k);
+            }
+        }
+
+        if (groupes.length > 0) {
+            toggleAccordion(groupes[0].id);
+        }
+    }
+
+    // Génère le HTML pour la liste des fichiers déjà enregistrés
+    function genererListeFichiers(fichiers, kpiId, annee, estSaisi) {
+        if (!fichiers || fichiers.length === 0) return '';
+        let html = '<ul>';
+        fichiers.forEach(f => {
+            html += `<li id="file-item-${kpiId}-${annee}-${f.id}">
+                <span>${f.nom}</span>
+                <a href="#" onclick="ouvrirFichier(event, '/uploads/${f.chemin}')" title="Ouvrir">🔗</a>
+                ${!estSaisi ? '' : `<span class="retirer-fichier" onclick="retirerFichier(${kpiId}, ${annee}, ${f.id})" title="Retirer">❌</span>`}
+            </li>`;
+        });
+        html += '</ul>';
+        return html;
+    }
+
+    // Vérifie que le fichier existe avant de l'ouvrir
+    async function ouvrirFichier(event, url) {
+        event.preventDefault();
+        try {
+            const response = await fetch(url.replace('/uploads/', '/api/fichier/existe/'));
+            const data = await response.json();
+            
+            if (data.exists) {
+                window.open(url, '_blank');
+            } else {
+                alert('❌ Fichier non trouvé. Il a peut-être été supprimé.');
+            }
+        } catch (error) {
+            alert('❌ Erreur lors de la vérification du fichier: ' + error);
+        }
+    }
+
+
+    async function chargerDonneesAnnuelles(kpi) {
+        const kpiId = kpi.id;
+        const valeurCible = kpi.valeur_cible;
+        const formule = normaliserTexte(kpi.formule_type);
+        const variableUnique = aUneSeuleVariable(kpi);
+        const sansColumnResultat = avecColonneSansResultat(kpi);
+        const libelleResultat = obtenirLibelleResultat(kpi);
+        const libelleVariable = libelleVariableUnique(kpi);
+
+        const response = await fetch(`/api/kpis/annuel/${kpiId}`);
+        const data = await response.json();
+
+        const tbody = document.getElementById(`tbody-${kpiId}`);
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        let valeurs = [];
+        let previousTaux = null;
+
+        for (let i = 0; i < annees.length; i++) {
+            const annee = annees[i];
+            const item = data.find(d => d.annee === annee) || { numerateur: 0, denominateur: 0, valeur: 0, commentaire: '', fichiers: [] };
+            const estSaisi = variableUnique ? (item.numerateur > 0) : (item.numerateur > 0 || item.denominateur > 0);
+            const rowClass = estSaisi ? 'row-saved' : '';
+
+            const taux = item.valeur;
+            valeurs.push(taux);
+
+            const valeurAffichee = formaterValeurResultat(taux, kpi);
+
+            let ligneContenu = '';
+            if (variableUnique) {
+                ligneContenu = `<td><input type="number" id="num-${kpiId}-${annee}" value="${item.numerateur}" step="any" style="width:90px" ${estSaisi ? 'disabled' : ''}></td>`;
+            } else {
+                ligneContenu = `<td><input type="number" id="num-${kpiId}-${annee}" value="${item.numerateur}" step="any" style="width:90px" ${estSaisi ? 'disabled' : ''}></td>
+                                <td><input type="number" id="den-${kpiId}-${annee}" value="${item.denominateur}" step="any" style="width:90px" ${estSaisi ? 'disabled' : ''}></td>`;
+            }
+            
+            // Ajouter colonne résultat seulement si pas un des 4 KPI
+            if (!sansColumnResultat) {
+                ligneContenu += `<td id="result-${kpiId}-${annee}"><strong>${valeurAffichee}</strong></td>`;
+            }
+
+            tbody.innerHTML += `
+                <tr id="row-${kpiId}-${annee}" class="${rowClass}">
+                    <td><strong>${annee}</strong></td>
+                    ${ligneContenu}
+                    <td class="cible-cell">${formaterValeurResultat(valeurCible, kpi)}</td>
+                    <td class="commentaire-cell"><textarea id="com-${kpiId}-${annee}" rows="2" style="width:100%; resize: vertical;" ${estSaisi ? 'disabled' : ''}>${item.commentaire || ''}</textarea></td>
+                    <td>
+                        <div id="files-container-${kpiId}-${annee}" class="files-list">
+                            ${genererListeFichiers(item.fichiers || [], kpiId, annee, estSaisi)}
+                        </div>
+                        <button class="btn-add-file" onclick="ajouterFichier(${kpiId}, ${annee})" ${estSaisi ? 'disabled' : ''}>➕</button>
+                        <input type="file" id="file-input-${kpiId}-${annee}" multiple accept=".pdf,.docx,.xlsx" style="display:none" onchange="uploadFichiers(${kpiId}, ${annee})">
+                    </td>
+                    <td>
+                        ${!estSaisi ?
+                            `<button class="btn-save-annee" onclick="enregistrerAnnee(${kpiId}, ${annee})">💾</button>` :
+                            `<button class="btn-modify-annee" onclick="activerModification(${kpiId}, ${annee})">✏️</button>`
+                        }
+                        <button class="btn-delete-annee" onclick="supprimerLigne(${kpiId}, ${annee})">🗑️</button>
+                    </td>
+                </tr>
+            `;
+
+            const numInput = document.getElementById(`num-${kpiId}-${annee}`);
+            const denInput = document.getElementById(`den-${kpiId}-${annee}`);
+            if (numInput && !estSaisi && !sansColumnResultat) {
+                const update = () => {
+                    const num = parseFloat(numInput.value) || 0;
+                    const den = denInput ? (parseFloat(denInput.value) || 0) : 0;
+                    let result = 0;
+                    if (variableUnique) {
+                        result = num;
+                    } else if (formule === 'pourcentage') {
+                        result = den > 0 ? (num / den) * 100 : 0;
+                    } else if (formule === 'ratio' || formule === 'moyenne') {
+                        result = den > 0 ? (num / den) : 0;
+                    } else if (formule === 'somme' || formule === 'score_externe') {
+                        result = num;
+                    } else {
+                        result = den > 0 ? (num / den) * 100 : 0;
+                    }
+                    const resultCell = document.getElementById(`result-${kpiId}-${annee}`);
+                    if (resultCell) {
+                        resultCell.innerHTML = `<strong>${formaterValeurResultat(result, kpi)}</strong>`;
+                    }
+                };
+                numInput.oninput = update;
+                if (denInput) denInput.oninput = update;
+            }
+
+            previousTaux = taux;
+        }
+
+        // Ajouter la ligne des statistiques
+        const valeursFiltrees = valeurs.filter(v => v > 0);
+        if (valeursFiltrees.length > 0) {
+            const minVal = Math.min(...valeursFiltrees);
+            const maxVal = Math.max(...valeursFiltrees);
+            const avgVal = valeursFiltrees.reduce((a,b) => a+b, 0) / valeursFiltrees.length;
+            const firstVal = valeursFiltrees[0];
+            const lastVal = valeursFiltrees[valeursFiltrees.length-1];
+            let tendance = '';
+            if (lastVal > firstVal) tendance = '↑ Hausse';
+            else if (lastVal < firstVal) tendance = '↓ Baisse';
+            else tendance = '→ Stable';
+
+            const statColsCount = sansColumnResultat ? (variableUnique ? 2 : 3) : (variableUnique ? 3 : 4);
+
+            tbody.innerHTML += `
+                <tr class="stats-row">
+                    <td colspan="${statColsCount}" style="text-align:right;"><strong>STATISTIQUES</strong></td>
+                    <td><strong>Min: ${formaterValeurResultat(minVal, kpi)}</strong></td>
+                    <td><strong>Max: ${formaterValeurResultat(maxVal, kpi)}</strong></td>
+                    <td><strong>Moy: ${formaterValeurResultat(avgVal, kpi)}</strong></td>
+                    <td colspan="3"><strong>Tendance: ${tendance}</strong></td>
+                </tr>
+            `;
+        }
+
+}
+
+    function activerModification(kpiId, annee) {
+        document.getElementById(`num-${kpiId}-${annee}`).disabled = false;
+        const denInput = document.getElementById(`den-${kpiId}-${annee}`);
+        if (denInput) denInput.disabled = false;
+        document.getElementById(`com-${kpiId}-${annee}`).disabled = false;
+        document.querySelector(`#row-${kpiId}-${annee} .btn-add-file`).disabled = false;
+
+        // Réafficher les icônes de retrait sur les fichiers
+        const container = document.getElementById(`files-container-${kpiId}-${annee}`);
+        container.querySelectorAll('.retirer-fichier').forEach(span => span.style.display = 'inline');
+
+        const actionCell = document.querySelector(`#row-${kpiId}-${annee} td:last-child`);
+        actionCell.innerHTML = `
+            <button class="btn-save-annee" onclick="enregistrerAnnee(${kpiId}, ${annee})">💾</button>
+            <button class="btn-delete-annee" onclick="supprimerLigne(${kpiId}, ${annee})">🗑️</button>
+        `;
+    }
+
+
+    // Ouvre le sélecteur de fichiers multiples
+    function ajouterFichier(kpiId, annee) {
+        document.getElementById(`file-input-${kpiId}-${annee}`).click();
+    }
+
+    // Upload multiple des fichiers sélectionnés
+    async function uploadFichiers(kpiId, annee) {
+        const input = document.getElementById(`file-input-${kpiId}-${annee}`);
+        const files = input.files;
+        if (files.length === 0) return;
+
+        const container = document.getElementById(`files-container-${kpiId}-${annee}`);
+        const allowedExtensions = ['.pdf', '.docx', '.xlsx'];
+
+        for (let file of files) {
+            const fileExt = file.name.toLowerCase();
+            if (!allowedExtensions.some(ext => fileExt.endsWith(ext))) {
+                alert(`❌ ${file.name} : format non autorisé. Formats acceptés : PDF, DOCX, XLSX.`);
+                continue;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('annee', annee);
+
+            try {
+                const response = await fetch(`/api/kpis/upload/${kpiId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                console.log("Response upload:", result);
+
+                if (response.ok) {
+                    // Ajouter le fichier à l'affichage
+                    const fileId = result.id || Date.now(); // Adapter selon la réponse réelle de l'API
+                    const newFileHtml = `
+                        <li id="file-item-${kpiId}-${annee}-${fileId}">
+                            <span>${file.name}</span>
+                            <a href="#" onclick="ouvrirFichier(event, '/uploads/${result.full_path}')" title="Ouvrir">🔗</a>
+                            <span class="retirer-fichier" onclick="retirerFichier(${kpiId}, ${annee}, ${fileId})" title="Retirer">❌</span>
+                        </li>
+                    `;
+                    // S'assurer qu'il y a un <ul> dans le conteneur
+                    let ul = container.querySelector('ul');
+                    if (!ul) {
+                        ul = document.createElement('ul');
+                        container.appendChild(ul);
+                    }
+                    ul.insertAdjacentHTML('beforeend', newFileHtml);
+                } else {
+                    alert(`Erreur upload 1 ${file.name}: ${result.error} `);
+                    console.log(`Détails de l'erreur:`, result); // Log pour debug détaillé
+                }
+            } catch (error) {
+                alert(`Erreur upload 2 ${file.name}: ${error}`);
+            }
+        }
+        input.value = ''; // Réinitialiser pour permettre de sélectionner à nouveau les mêmes fichiers
+    }
+
+    // Retirer un fichier (suppression côté serveur + mise à jour UI)
+    async function retirerFichier(kpiId, annee, fileId) {
+        if (!confirm('Retirer ce fichier ?')) return;
+
+        try {
+            const response = await fetch(`/api/kpis/fichier/${kpiId}/${annee}/${fileId}`, {
+                method: 'DELETE'
+            });
+            if (response.ok) {
+                const element = document.getElementById(`file-item-${kpiId}-${annee}-${fileId}`);
+                if (element) element.remove();
+                // Si le ul devient vide, on peut le supprimer
+                const container = document.getElementById(`files-container-${kpiId}-${annee}`);
+                const ul = container.querySelector('ul');
+                if (ul && ul.children.length === 0) {
+                    ul.remove();
+                }
+            } else {
+                const err = await response.json();
+                alert(`Erreur suppression: ${err.error}`);
+            }
+        } catch (error) {
+            alert(`Erreur: ${error}`);
+        }
+    }
+
+    // Supprimer toute la ligne (réinitialisation)
+    async function supprimerLigne(kpiId, annee) {
+        if (!confirm(`Réinitialiser les données de ${annee} ? Tous les champs et fichiers seront effacés.`)) return;
+
+        try {
+            // Appel API pour supprimer les données de l'année (numérateur, dénominateur, commentaire, tous les fichiers)
+            const response = await fetch(`/api/kpis/annuel/delete/${kpiId}/${annee}`, {
+                method: 'DELETE'
+            });
+            if (response.ok) {
+                // Réinitialiser l'affichage de la ligne
+                const row = document.getElementById(`row-${kpiId}-${annee}`);
+                const numInput = document.getElementById(`num-${kpiId}-${annee}`);
+                const denInput = document.getElementById(`den-${kpiId}-${annee}`);
+                const comInput = document.getElementById(`com-${kpiId}-${annee}`);
+                
+                if (numInput) {
+                    numInput.value = '';
+                    numInput.disabled = false;
+                }
+                if (denInput) {
+                    denInput.value = '';
+                    denInput.disabled = false;
+                }
+                if (comInput) {
+                    comInput.value = '';
+                    comInput.disabled = false;
+                }
+
+                // Vider le conteneur de fichiers
+                const container = document.getElementById(`files-container-${kpiId}-${annee}`);
+                container.innerHTML = '';
+
+                // Réactiver le bouton d'ajout de fichier
+                row.querySelector('.btn-add-file').disabled = false;
+
+                // Mettre le bouton "Enregistrer"
+                const actionCell = row.querySelector('td:last-child');
+                actionCell.innerHTML = `
+                    <button class="btn-save-annee" onclick="enregistrerAnnee(${kpiId}, ${annee})">💾</button>
+                    <button class="btn-delete-annee" onclick="supprimerLigne(${kpiId}, ${annee})">🗑️</button>
+                `;
+
+                // Retirer la classe row-saved
+                row.classList.remove('row-saved');
+
+                // Mettre à jour le résultat (seulement si la colonne existe)
+                const resultCell = document.getElementById(`result-${kpiId}-${annee}`);
+                if (resultCell) {
+                    resultCell.innerHTML = '<strong>0</strong>';
+                }
+
+                document.getElementById('successMsg').style.display = 'block';
+                setTimeout(() => document.getElementById('successMsg').style.display = 'none', 2000);
+            } else {
+                const err = await response.json();
+                alert(`Erreur suppression: ${err.error}`);
+            }
+        } catch (error) {
+            alert(`Erreur: ${error}`);
+        }
+    }
+
+    async function enregistrerAnnee(kpiId, annee) {
+        const numerateurInput = document.getElementById(`num-${kpiId}-${annee}`);
+        const denominateurInput = document.getElementById(`den-${kpiId}-${annee}`);
+        const commentaireInput = document.getElementById(`com-${kpiId}-${annee}`);
+
+        const numerateur = numerateurInput.value;
+        const denominateur = denominateurInput ? denominateurInput.value : '';
+        const commentaire = commentaireInput ? commentaireInput.value : '';
+
+        // Validation
+        if (numerateur === '' || numerateur === null || numerateur.trim() === '') {
+            alert(`❌ Le champ NUMERATEUR est obligatoire pour l'année ${annee}`);
+            numerateurInput.style.border = "2px solid red";
+            numerateurInput.focus();
+            return;
+        }
+        const numValue = parseFloat(numerateur);
+        if (isNaN(numValue) || numValue < 0) {
+            alert(`❌ Le numérateur doit être un nombre valide (≥ 0) pour l'année ${annee}`);
+            numerateurInput.style.border = "2px solid red";
+            numerateurInput.focus();
+            return;
+        }
+        let denValue = 0;
+        if (denominateurInput) {
+            if (denominateur === '' || denominateur === null || denominateur.trim() === '') {
+                alert(`❌ Le champ DENOMINATEUR est obligatoire pour l'année ${annee}`);
+                denominateurInput.style.border = "2px solid red";
+                denominateurInput.focus();
+                return;
+            }
+            denValue = parseFloat(denominateur);
+            if (isNaN(denValue) || denValue <= 0) {
+                alert(`❌ Le dénominateur doit être un nombre valide > 0 pour l'année ${annee}`);
+                denominateurInput.style.border = "2px solid red";
+                denominateurInput.focus();
+                return;
+            }
+        }
+        if (commentaire === '' || commentaire === null || commentaire.trim() === '') {
+            alert(`❌ Le champ COMMENTAIRE est obligatoire pour l'année ${annee}`);
+            commentaireInput.style.border = "2px solid red";
+            commentaireInput.focus();
+            return;
+        }
+
+        // Vérifier qu'il y a au moins un fichier dans le conteneur
+        const container = document.getElementById(`files-container-${kpiId}-${annee}`);
+        const fichiersList = container.querySelectorAll('li');
+        if (fichiersList.length === 0) {
+            alert(`❌ Veuillez joindre au moins un fichier de preuve pour l'année ${annee}`);
+            return;
+        }
+
+        // Remettre les bordures normales
+        numerateurInput.style.border = "";
+        if (denominateurInput) denominateurInput.style.border = "";
+        commentaireInput.style.border = "";
+
+        // Envoyer les données numériques
+        const response = await fetch(`/api/kpis/annuel/update/${kpiId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                annee: annee,
+                numerateur: numValue,
+                denominateur: denValue,
+                commentaire: commentaire
+            })
+        });
+
+        if (response.ok) {
+            // Désactiver les champs
+            numerateurInput.disabled = true;
+            if (denominateurInput) denominateurInput.disabled = true;
+            commentaireInput.disabled = true;
+            document.querySelector(`#row-${kpiId}-${annee} .btn-add-file`).disabled = true;
+
+            // Cacher les icônes de retrait des fichiers
+            container.querySelectorAll('.retirer-fichier').forEach(span => span.style.display = 'none');
+
+            // Changer le bouton en "Modifier"
+            const actionCell = document.querySelector(`#row-${kpiId}-${annee} td:last-child`);
+            actionCell.innerHTML = `
+                <button class="btn-modify-annee" onclick="activerModification(${kpiId}, ${annee})">✏️</button>
+                <button class="btn-delete-annee" onclick="supprimerLigne(${kpiId}, ${annee})">🗑️</button>
+            `;
+
+            document.getElementById(`row-${kpiId}-${annee}`).classList.add('row-saved');
+
+            document.getElementById('successMsg').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('successMsg').style.display = 'none';
+            }, 3000);
+        } else {
+            const error = await response.json();
+            alert(`❌ Erreur lors de l'enregistrement: ${error.error || 'Problème inconnu'}`);
+        }
+    }
+
+    function toggleAccordion(groupeId) {
+        const allContents = document.querySelectorAll('.accordion-content');
+        const selectedContent = document.getElementById(`content-${groupeId}`);
+
+        allContents.forEach(content => {
+            if (content !== selectedContent) {
+                content.classList.remove('actif');
+            }
+        });
+        selectedContent.classList.toggle('actif');
+    }
+
+    chargerKPIs();
+</script>
+{% endblock %}

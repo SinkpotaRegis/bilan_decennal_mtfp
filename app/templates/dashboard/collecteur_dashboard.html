@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+
+{% block title %}Espace collecteur - Bilan Décennal MTFP{% endblock %}
+
+{% block header_title %}📊 ESPACE COLLECTEUR{% endblock %}
+
+{% block extra_css %}
+<style>
+	.dashboard-shell {
+		display: grid;
+		gap: 24px;
+		animation: fadeInUp 0.45s ease both;
+	}
+
+	.hero-card,
+	.panel-card,
+	.metric-card,
+	.step-card,
+	.shortcut-card {
+		background: rgba(255,255,255,0.92);
+		backdrop-filter: blur(12px);
+		border: 1px solid rgba(255,255,255,0.65);
+		box-shadow: 0 18px 50px rgba(10, 33, 18, 0.08);
+		border-radius: 24px;
+	}
+
+	.hero-card {
+		padding: 28px;
+		background: linear-gradient(135deg, #1c5637 0%, #2d6a4f 50%, #355f40 100%);
+		color: white;
+		position: relative;
+		overflow: hidden;
+	}
+
+	.hero-card::after {
+		content: '';
+		position: absolute;
+		inset: auto -60px -60px auto;
+		width: 180px;
+		height: 180px;
+		border-radius: 50%;
+		background: rgba(255,255,255,0.08);
+	}
+
+	.hero-grid {
+		display: grid;
+		grid-template-columns: 1.3fr 0.7fr;
+		gap: 24px;
+		align-items: center;
+		position: relative;
+		z-index: 1;
+	}
+
+	.hero-title {
+		font-size: clamp(28px, 4vw, 44px);
+		line-height: 1.05;
+		margin-bottom: 12px;
+		font-weight: 800;
+	}
+
+	.hero-text {
+		font-size: 15px;
+		line-height: 1.7;
+		max-width: 720px;
+		opacity: 0.94;
+	}
+
+	.hero-badges {
+		display: flex;
+		gap: 10px;
+		flex-wrap: wrap;
+		margin-top: 18px;
+	}
+
+	.hero-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 12px;
+		border-radius: 999px;
+		background: rgba(255,255,255,0.14);
+		color: white;
+		font-size: 12px;
+		font-weight: 600;
+		border: 1px solid rgba(255,255,255,0.18);
+	}
+
+	.hero-side {
+		display: grid;
+		gap: 14px;
+	}
+
+	.hero-stat {
+		padding: 16px 18px;
+		border-radius: 18px;
+		background: lab(59.16% -23.53 16.87 / 0.342);
+		border: 1px solid rgba(255,255,255,0.16);
+	}
+
+	.hero-stat .value {
+		display: block;
+		font-size: 30px;
+		font-weight: 800;
+		line-height: 1;
+		margin-bottom: 4px;
+	}
+
+	.hero-stat .label {
+		font-size: 12px;
+		opacity: 0.58;
+	}
+
+	.metrics-grid,
+	.shortcuts-grid,
+	.steps-grid {
+		display: grid;
+		gap: 18px;
+	}
+
+	.metrics-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.metric-card {
+		padding: 20px;
+		border-top: 4px solid #2d6a4f;
+		transition: transform 0.25s ease, box-shadow 0.25s ease;
+	}
+
+	.metric-card:hover,
+	.shortcut-card:hover,
+	.step-card:hover {
+		transform: translateY(-4px);
+		box-shadow: 0 24px 60px rgba(10, 33, 18, 0.12);
+	}
+
+	.metric-value {
+		font-size: 34px;
+		font-weight: 800;
+		color: #1a472a;
+		margin: 10px 0 4px;
+	}
+
+	.metric-label {
+		color: #5e6f63;
+		font-size: 13px;
+		line-height: 1.45;
+	}
+
+	.panel-card {
+		padding: 24px;
+	}
+
+	.panel-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 18px;
+	}
+
+	.panel-header h2 {
+		margin: 0;
+		color: #1a472a;
+		font-size: 20px;
+	}
+
+	.panel-header p {
+		margin: 4px 0 0;
+		color: #66756d;
+		font-size: 13px;
+	}
+
+	.btn-collecte {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		border: none;
+		border-radius: 999px;
+		padding: 12px 18px;
+		background: linear-gradient(135deg, #ff8c00, #ff6b00);
+		color: white;
+		font-weight: 700;
+		text-decoration: none;
+		box-shadow: 0 14px 28px rgba(255, 107, 0, 0.24);
+		transition: transform 0.22s ease, box-shadow 0.22s ease;
+	}
+
+	.btn-collecte:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 18px 34px rgba(255, 107, 0, 0.3);
+	}
+
+	.shortcuts-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.shortcut-card {
+		padding: 20px;
+		text-decoration: none;
+		color: inherit;
+		transition: transform 0.25s ease, box-shadow 0.25s ease;
+	}
+
+	.shortcut-card h3 {
+		margin: 12px 0 8px;
+		color: #1a472a;
+		font-size: 16px;
+	}
+
+	.shortcut-card p {
+		margin: 0;
+		color: #66756d;
+		line-height: 1.55;
+		font-size: 13px;
+	}
+
+	.shortcut-icon {
+		width: 48px;
+		height: 48px;
+		border-radius: 14px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		background: linear-gradient(135deg, rgba(45,106,79,0.12), rgba(255,140,0,0.12));
+		font-size: 22px;
+	}
+
+	.steps-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.step-card {
+		padding: 18px;
+	}
+
+	.step-number {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 34px;
+		height: 34px;
+		border-radius: 50%;
+		background: #1a472a;
+		color: white;
+		font-weight: 800;
+		margin-bottom: 12px;
+	}
+
+	.step-card h3 {
+		margin: 0 0 8px;
+		color: #1a472a;
+		font-size: 15px;
+	}
+
+	.step-card p {
+		margin: 0;
+		color: #627269;
+		font-size: 13px;
+		line-height: 1.55;
+	}
+
+	@keyframes fadeInUp {
+		from { opacity: 0; transform: translateY(16px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+
+	@media (max-width: 1100px) {
+		.hero-grid,
+		.metrics-grid,
+		.shortcuts-grid,
+		.steps-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 720px) {
+		.hero-grid,
+		.metrics-grid,
+		.shortcuts-grid,
+		.steps-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.hero-card,
+		.panel-card {
+			padding: 20px;
+			border-radius: 20px;
+		}
+
+		.panel-header {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+	}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-shell">
+	<section class="hero-card">
+		<div class="hero-grid">
+			<div>
+				<div class="hero-title">Bienvenue {{ current_user.username }}.</div>
+				<div class="hero-text">
+					Votre espace collecteur centralise la préparation des KPI, la saisie annuelle et le suivi des envois vers la direction de validation.
+					Utilisez le menu <strong>Choix du KPI</strong> dans la barre de navigation pour ouvrir directement le bon formulaire.
+				</div>
+				<!-- <div class="hero-badges">
+					<span class="hero-badge">📌 Statut par défaut: En attente après soumission</span>
+					<span class="hero-badge">📝 Commentaires conservés à chaque dépôt</span>
+					<span class="hero-badge">🏢 Direction: {{ current_user.structure or 'MTFP' }}</span>
+				</div> -->
+			</div>
+			<div class="hero-side">
+				<div class="hero-stat">
+					<span class="value">14</span>
+					<span class="label">KPI fonction publique accessibles depuis le menu</span>
+				</div>
+				<div class="hero-stat">
+					<span class="value">3</span>
+					<span class="label">étapes simples: saisir, soumettre, suivre la validation</span>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section class="panel-card">
+		<!-- <div class="panel-header">
+			<a class="btn-collecte" href="{{ url_for('api.collecte_avancee') }}">📅 Ouvrir la collecte annuelle</a>
+		</div> -->
+		<div class="metrics-grid">
+			<div class="metric-card">
+				<div class="metric-label">Soumissions effectuées</div>
+				<div class="metric-value">08</div>
+				<div class="metric-label">Totale</div>
+			</div>
+			<div class="metric-card">
+				<div class="metric-label">Soumissions envoyées</div>
+				<div class="metric-value">21</div>
+				<div class="metric-label">Validée(s)</div>
+			</div>
+			<div class="metric-card">
+				<div class="metric-label">Soumissions envoyées</div>
+				<div class="metric-value">06</div>
+				<div class="metric-label">En attente de validation</div>
+			</div>
+			<!-- <div class="metric-card">
+				<div class="metric-label">Commentaires reçus</div>
+				<div class="metric-value">04</div>
+				<div class="metric-label"></div>
+			</div> -->
+		</div>
+	</section>
+
+	{#
+	<section class="panel-card">
+		<div class="panel-header">
+			<div>
+				<h2>Raccourcis KPI</h2>
+				<p>Accès direct aux indicateurs les plus utilisés</p>
+			</div>
+		</div>
+		<div class="shortcuts-grid">
+			<a class="shortcut-card" href="{{ url_for('api.kpi_page', kpi_code='gt3pki06') }}">
+				<div class="shortcut-icon">🏁</div>
+				<h3>GT3PKI06</h3>
+				<p>Délai moyen de proclamation des résultats des concours.</p>
+			</a>
+			<a class="shortcut-card" href="{{ url_for('api.kpi_page', kpi_code='gt3pki11') }}">
+				<div class="shortcut-icon">👥</div>
+				<h3>GT3PKI11</h3>
+				<p>Nombre d'agents recrutés dans l'administration publique.</p>
+			</a>
+			<a class="shortcut-card" href="{{ url_for('api.kpi_page', kpi_code='gt3pki14') }}">
+				<div class="shortcut-icon">🏛️</div>
+				<h3>GT3PKI14</h3>
+				<p>Recrutements par secteur sur la période 2016-2026.</p>
+			</a>
+		</div>
+	</section>
+	#}
+
+	<section class="panel-card">
+		<div class="panel-header">
+			<div>
+				<h2>Parcours recommandé</h2>
+				<p>Une lecture courte pour fluidifier la saisie et la soumission.</p>
+			</div>
+		</div>
+		<div class="steps-grid">
+			<div class="step-card">
+				<div class="step-number">1</div>
+				<h3>Choisir le KPI</h3>
+				<p>Ouvrez le menu <strong><code>Choix du KPI</code></strong> dans la barre de navigation et sélectionnez l'indicateur concerné.</p>
+			</div>
+			<div class="step-card">
+				<div class="step-number">2</div>
+				<h3>Renseigner les données</h3>
+				<p>Complétez le formulaire avec les valeurs de direction et ajoutez un commentaire clair.</p>
+			</div>
+			<div class="step-card">
+				<div class="step-number">3</div>
+				<h3>Soumettre pour validation</h3>
+				<p>Après dépôt, le validateur traitera la soumission et renverra un commentaire si nécessaire.</p>
+			</div>
+		</div>
+	</section>
+</div>
+{% endblock %}

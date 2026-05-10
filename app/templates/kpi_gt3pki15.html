@@ -1,0 +1,786 @@
+{% extends "base.html" %}
+
+{% block titre %}GT3PKI15 — Nombre de personnes handicapées recrutées dans la fonction publique{% endblock %}
+
+{% block extra_css %}
+
+    <style>
+        /* ===== RESET & BASE ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            color: #1a1a2e;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* ===== EN-TÊTE ===== */
+        .header {
+            background: linear-gradient(135deg, #006633 0%, #008844 100%);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header h1 { font-size: 1.3rem; font-weight: 700; }
+        .header p { font-size: 0.85rem; opacity: 0.9; margin-top: 4px; }
+        .badge-code {
+            background: rgba(255,255,255,0.2);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1rem;
+            letter-spacing: 1px;
+        }
+
+        /* ===== FICHE KPI ===== */
+        .fiche-kpi {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #006633;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .fiche-kpi h2 { color: #006633; font-size: 1rem; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .fiche-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; font-size: 0.85rem; }
+        .fiche-item { display: flex; flex-direction: column; gap: 2px; }
+        .fiche-item label { color: #888; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .fiche-item span { color: #333; font-weight: 500; }
+        .formule-box {
+            background: #f8fdf9;
+            border: 1px dashed #006633;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: #006633;
+            text-align: center;
+        }
+        .quota-box {
+            background: linear-gradient(135deg, #fff8e1, #fff3e0);
+            border: 1px solid #ffcc80;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+        .quota-box strong { color: #e65100; }
+
+        /* ===== STATS CARDS ===== */
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 18px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #006633;
+        }
+        .stat-card .stat-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: #666;
+            margin-top: 5px;
+        }
+        .stat-card.highlight .stat-value { color: #ff8c00; font-size: 2.2rem; }
+
+        /* ===== SECTION SAISIE ===== */
+        .saisie-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .saisie-section h2 {
+            color: #006633;
+            font-size: 1.05rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e8f5e9;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ===== TABLEAU PRINCIPAL ===== */
+        .tableau-wrapper {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        th {
+            background: #006633;
+            color: white;
+            padding: 12px 10px;
+            text-align: center;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #e8f5e9;
+        }
+        tr:nth-child(even) td { background: #f8fdf9; }
+        tr:hover td { background: #e8ffeb; }
+        .categorie-col {
+            font-weight: bold;
+            color: #006633;
+            text-align: left;
+            background: #f0fff4;
+        }
+        .total-row td {
+            background: #e8f5e9;
+            font-weight: bold;
+            border-top: 2px solid #006633;
+        }
+        input.recrutement-input {
+            width: 90px;
+            padding: 6px 8px;
+            border: 1.5px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        input.recrutement-input:focus {
+            border-color: #006633;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0,102,51,0.1);
+        }
+        .total-categorie {
+            font-weight: bold;
+            color: #006633;
+        }
+
+        /* ===== GRAPHIQUE ===== */
+        .chart-container {
+            margin-top: 25px;
+            padding: 20px;
+            background: #fafdf9;
+            border-radius: 12px;
+            border: 1px solid #e0e8e0;
+        }
+        .chart-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #006633;
+            margin-bottom: 15px;
+        }
+        .bar-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .bar-label {
+            width: 180px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #333;
+        }
+        .bar-fill {
+            flex: 1;
+            height: 28px;
+            background: linear-gradient(90deg, #006633, #008844);
+            border-radius: 14px;
+            min-width: 5px;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .bar-value {
+            min-width: 60px;
+            text-align: right;
+            font-weight: bold;
+            color: #006633;
+        }
+
+        /* ===== SECTION SOUMETTRE ===== */
+        .section-soumettre {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: none;
+        }
+        .btn-soumettre {
+            background: linear-gradient(135deg, #006633, #008844);
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn-soumettre:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,102,51,0.3); }
+        .btn-soumettre:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* ===== RÉSULTATS ===== */
+        #section-resultats {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: none;
+        }
+        .result-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .result-card { background: linear-gradient(135deg, #006633, #1b8040); color: white; padding: 18px; border-radius: 12px; text-align: center; }
+        .rc-value { font-size: 1.8rem; font-weight: 800; }
+        .rc-label { font-size: 0.7rem; opacity: 0.85; }
+
+        .notif { padding: 14px 18px; border-radius: 10px; margin-bottom: 15px; }
+        .notif-success { background: #e8f5e9; border: 1px solid #a5d6a7; color: #2e7d32; }
+        .notif-error { background: #ffebee; border: 1px solid #ffcdd2; color: #c62828; }
+
+        .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .badge-annuel {
+            display: inline-flex;
+            background: #fff3e0;
+            color: #e65100;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-left: 10px;
+        }
+
+        .objectif-badge {
+            display: inline-block;
+            background: #ff8c00;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 15px;
+            margin-left: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .bar-label { width: 120px; font-size: 0.7rem; }
+            input.recrutement-input { width: 65px; }
+            th, td { padding: 8px 5px; font-size: 0.75rem; }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="header">
+        <div>
+            <h1>♿ Collecte de données — Personnes handicapées recrutées dans la fonction publique
+                <span class="badge-annuel">📅 Annuel</span>
+            </h1>
+            <p>Fonction Publique · Suivi de l'inclusion et du respect du quota légal (5%)</p>
+        </div>
+        <div class="badge-code">GT3PKI15</div>
+    </div>
+
+    <!-- FICHE KPI -->
+    <div class="fiche-kpi">
+        <h2>ℹ️ Fiche de l'indicateur</h2>
+        <div class="fiche-grid">
+            <div class="fiche-item">
+                <label>Intitulé</label>
+                <span>Nombre de personnes handicapées recrutées dans la fonction publique</span>
+            </div>
+            <div class="fiche-item">
+                <label>Unité de mesure</label>
+                <span>Nombre (valeur absolue cumulée)</span>
+            </div>
+            <div class="fiche-item">
+                <label>Fréquence de collecte</label>
+                <span>Annuelle</span>
+            </div>
+            <div class="fiche-item">
+                <label>Sources de vérification</label>
+                <span>DGRH · Ministère des Affaires Sociales · Commissions d'Accès</span>
+            </div>
+        </div>
+        <div class="formule-box">
+            <strong>Mode de calcul :</strong> Décompte cumulatif des actes de recrutement de personnes en situation de handicap (PSH) sur la période
+        </div>
+        <div class="quota-box">
+            <strong>⚖️ Quota légal :</strong> 5% des recrutements totaux doivent bénéficier aux personnes handicapées <span class="objectif-badge">Objectif inclusion</span>
+        </div>
+    </div>
+
+    <!-- CARTES STATISTIQUES -->
+    <div class="stats-cards">
+        <div class="stat-card highlight">
+            <div class="stat-value" id="total-general">0</div>
+            <div class="stat-label">Total PSH recrutés (cumul)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="total-recrutements">0</div>
+            <div class="stat-label">Total recrutements généraux</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="taux-realisation">0%</div>
+            <div class="stat-label">Taux de réalisation du quota</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="objectif-quota">0</div>
+            <div class="stat-label">Objectif quota (5%)</div>
+        </div>
+    </div>
+
+    <!-- SECTION SAISIE -->
+    <div class="saisie-section">
+        <h2>✏️ Saisie des recrutements par année et par catégorie de handicap</h2>
+
+        <div class="tableau-wrapper">
+            <table id="table-recrutements">
+                <thead>
+                    <tr>
+                        <th>Catégorie / Année</th>
+                        <th>2016</th>
+                        <th>2017</th>
+                        <th>2018</th>
+                        <th>2019</th>
+                        <th>2020</th>
+                        <th>2021</th>
+                        <th>2022</th>
+                        <th>2023</th>
+                        <th>2024</th>
+                        <th>2025</th>
+                        <th>2026</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-recrutements">
+                    <!-- Généré par JS -->
+                </tbody>
+                <tfoot id="tfoot-recrutements">
+                    <!-- Total général -->
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Ligne pour les recrutements généraux totaux -->
+        <div style="margin: 20px 0; padding: 15px; background: #f0fff4; border-radius: 10px;">
+            <div class="fields-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div class="field-group">
+                    <label>📊 Recrutements généraux totaux (toutes catégories)</label>
+                    <input type="number" id="recrutements-generaux" class="recrutement-input" style="width: 100%;" min="0" step="1" value="0" oninput="mettreAJourRecrutementsGeneraux()">
+                </div>
+                <div class="field-group">
+                    <label>🎯 Quota cible (5% des recrutements)</label>
+                    <input type="text" id="quota-cible" class="recrutement-input" style="width: 100%; background: #f5f5f5;" readonly>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graphique d'évolution -->
+        <div class="chart-container" id="chart-container">
+            <div class="chart-title">📊 Évolution des recrutements PSH par année</div>
+            <div id="graphique-evolution"></div>
+        </div>
+
+        <button class="btn-soumettre" id="btn-soumettre" onclick="soumettreDonnees()">
+            <span id="btn-icon">✅</span>
+            <span id="btn-texte">Soumettre et enregistrer</span>
+        </button>
+    </div>
+
+    <!-- SECTION RÉSULTATS -->
+    <div id="section-resultats">
+        <h2>🏆 Résultats enregistrés</h2>
+        <div id="notif-result"></div>
+        <div class="result-cards" id="result-cards"></div>
+        <div class="recap-table-wrapper">
+            <table id="table-resultats">
+                <thead>
+                    <tr>
+                        <th>Année</th>
+                        <th>PSH recrutés</th>
+                        <th>Recrutements totaux</th>
+                        <th>Taux PSH</th>
+                        <th>Statut quota</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-resultats"></tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // ============================================================
+    // ÉTAT GLOBAL
+    // Structure: recrutementsPSH[annee][categorie] = nombre
+    // ============================================================
+    let recrutementsPSH = {};
+    let recrutementsGeneraux = 0;
+    let kpiId = null;
+
+    const annees = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+    
+    const categoriesHandicap = [
+        "Handicap moteur",
+        "Handicap visuel",
+        "Handicap auditif",
+        "Handicap mental / intellectuel",
+        "Polyhandicap",
+        "Autres handicaps"
+    ];
+
+    const QUOTA_POURCENT = 5; // 5%
+
+    // ============================================================
+    // INITIALISATION
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        initialiserDonnees();
+        recupererIdKpi();
+        genererTableau();
+        genererGraphique();
+        mettreAJourStatistiques();
+    });
+
+    function initialiserDonnees() {
+        for (let annee of annees) {
+            if (!recrutementsPSH[annee]) {
+                recrutementsPSH[annee] = {};
+                for (let cat of categoriesHandicap) {
+                    recrutementsPSH[annee][cat] = 0;
+                }
+            }
+        }
+    }
+
+    async function recupererIdKpi() {
+        try {
+            const res = await fetch('/api/kpis');
+            const kpis = await res.json();
+            const kpi = kpis.find(k => k.code === 'GT3PKI15');
+            if (kpi) {
+                kpiId = kpi.id;
+                console.log('KPI GT3PKI15 trouvé, ID :', kpiId);
+            }
+        } catch (err) {
+            console.error('Erreur récupération KPI:', err);
+        }
+    }
+
+    // ============================================================
+    // GÉNÉRATION DU TABLEAU
+    // ============================================================
+    function genererTableau() {
+        const tbody = document.getElementById('tbody-recrutements');
+        tbody.innerHTML = '';
+
+        for (let categorie of categoriesHandicap) {
+            const row = document.createElement('tr');
+            let totalCategorie = 0;
+            let rowHtml = `<td class="categorie-col">${categorie}</td>`;
+
+            for (let annee of annees) {
+                const valeur = recrutementsPSH[annee][categorie] || 0;
+                totalCategorie += valeur;
+                rowHtml += `<td><input type="number" class="recrutement-input" id="input-${categorie.replace(/\s/g, '')}-${annee}" value="${valeur}" min="0" step="1" onchange="mettreAJourValeur('${categorie}', ${annee}, this.value)"></td>`;
+            }
+
+            rowHtml += `<td class="total-categorie" id="total-${categorie.replace(/\s/g, '')}">${totalCategorie.toLocaleString()}</td>`;
+            row.innerHTML = rowHtml;
+            tbody.appendChild(row);
+        }
+
+        genererLigneTotal();
+    }
+
+    function mettreAJourValeur(categorie, annee, valeur) {
+        const nb = parseInt(valeur) || 0;
+        recrutementsPSH[annee][categorie] = nb;
+
+        // Mettre à jour le total de la catégorie
+        let totalCategorie = 0;
+        for (let a of annees) {
+            totalCategorie += recrutementsPSH[a][categorie] || 0;
+        }
+        const totalCell = document.getElementById(`total-${categorie.replace(/\s/g, '')}`);
+        if (totalCell) totalCell.textContent = totalCategorie.toLocaleString();
+
+        genererLigneTotal();
+        genererGraphique();
+        mettreAJourStatistiques();
+    }
+
+    function genererLigneTotal() {
+        const tfoot = document.getElementById('tfoot-recrutements');
+        let totalsParAnnee = {};
+        for (let annee of annees) {
+            totalsParAnnee[annee] = 0;
+        }
+
+        for (let annee of annees) {
+            for (let categorie of categoriesHandicap) {
+                totalsParAnnee[annee] += recrutementsPSH[annee][categorie] || 0;
+            }
+        }
+
+        let totalGeneral = 0;
+        let rowHtml = `<tr class="total-row"><td><strong>TOTAL PSH</strong></td>`;
+        for (let annee of annees) {
+            const totalAnnee = totalsParAnnee[annee];
+            totalGeneral += totalAnnee;
+            rowHtml += `<td><strong>${totalAnnee.toLocaleString()}</strong></td>`;
+        }
+        rowHtml += `<td><strong>${totalGeneral.toLocaleString()}</strong></td></tr>`;
+        tfoot.innerHTML = rowHtml;
+
+        document.getElementById('total-general').textContent = totalGeneral.toLocaleString();
+    }
+
+    // ============================================================
+    // RECRUTEMENTS GÉNÉRAUX ET QUOTA
+    // ============================================================
+    function mettreAJourRecrutementsGeneraux() {
+        recrutementsGeneraux = parseInt(document.getElementById('recrutements-generaux').value) || 0;
+        const quotaCible = Math.floor(recrutementsGeneraux * QUOTA_POURCENT / 100);
+        document.getElementById('quota-cible').value = quotaCible.toLocaleString();
+        
+        mettreAJourStatistiques();
+    }
+
+    function mettreAJourStatistiques() {
+        const totalPSH = parseInt(document.getElementById('total-general').textContent.replace(/,/g, '')) || 0;
+        const quotaCible = Math.floor(recrutementsGeneraux * QUOTA_POURCENT / 100);
+        
+        document.getElementById('total-recrutements').textContent = recrutementsGeneraux.toLocaleString();
+        document.getElementById('objectif-quota').textContent = quotaCible.toLocaleString();
+        
+        let tauxRealisation = 0;
+        if (quotaCible > 0) {
+            tauxRealisation = (totalPSH / quotaCible) * 100;
+        }
+        document.getElementById('taux-realisation').textContent = tauxRealisation.toFixed(1) + '%';
+        
+        // Couleur du taux
+        const tauxElement = document.getElementById('taux-realisation');
+        if (tauxRealisation >= 100) {
+            tauxElement.style.color = '#2e7d32';
+        } else if (tauxRealisation >= 50) {
+            tauxElement.style.color = '#ff8c00';
+        } else {
+            tauxElement.style.color = '#e53935';
+        }
+    }
+
+    // ============================================================
+    // GRAPHIQUE
+    // ============================================================
+    function genererGraphique() {
+        const container = document.getElementById('graphique-evolution');
+        
+        let totalsParAnnee = [];
+        let maxTotal = 0;
+        
+        for (let annee of annees) {
+            let total = 0;
+            for (let categorie of categoriesHandicap) {
+                total += recrutementsPSH[annee][categorie] || 0;
+            }
+            totalsParAnnee.push({ annee, total });
+            if (total > maxTotal) maxTotal = total;
+        }
+        
+        if (maxTotal === 0) {
+            container.innerHTML = `<div style="text-align:center; padding:40px; color:#888;">Aucune donnée à afficher</div>`;
+            return;
+        }
+        
+        let html = '';
+        for (let item of totalsParAnnee) {
+            const pourcentage = (item.total / maxTotal) * 100;
+            html += `
+                <div class="bar-item">
+                    <div class="bar-label">${item.annee}</div>
+                    <div class="bar-fill" style="width: ${pourcentage}%;">
+                        ${pourcentage > 15 ? item.total : ''}
+                    </div>
+                    <div class="bar-value">${item.total}</div>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = html;
+    }
+
+    // ============================================================
+    // SOUMISSION
+    // ============================================================
+    async function soumettreDonnees() {
+        const btn = document.getElementById('btn-soumettre');
+        const icon = document.getElementById('btn-icon');
+        const texte = document.getElementById('btn-texte');
+
+        btn.disabled = true;
+        icon.innerHTML = '<div class="spinner"></div>';
+        texte.textContent = 'Enregistrement...';
+
+        // Calcul du total général PSH
+        let totalPSH = 0;
+        let detailsParAnnee = [];
+
+        for (let annee of annees) {
+            let totalAnnee = 0;
+            let detailsCategorie = [];
+            for (let categorie of categoriesHandicap) {
+                const valeur = recrutementsPSH[annee][categorie] || 0;
+                totalAnnee += valeur;
+                if (valeur > 0) {
+                    detailsCategorie.push(`${categorie}: ${valeur}`);
+                }
+            }
+            totalPSH += totalAnnee;
+            if (totalAnnee > 0) {
+                detailsParAnnee.push(`${annee}: ${totalAnnee} (${detailsCategorie.join(', ')})`);
+            }
+        }
+
+        const quotaCible = Math.floor(recrutementsGeneraux * QUOTA_POURCENT / 100);
+        const tauxRealisation = quotaCible > 0 ? ((totalPSH / quotaCible) * 100).toFixed(1) : 0;
+
+        const commentaire = `Période 2016-2026 - Total PSH recrutés: ${totalPSH} agents - Recrutements généraux: ${recrutementsGeneraux} - Quota cible (5%): ${quotaCible} - Taux réalisation: ${tauxRealisation}% - Détail par année: ${detailsParAnnee.join('; ')}`;
+
+        try {
+            const response = await fetch(`/api/kpis/annuel/update/${kpiId || 1}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    annee: 2026,
+                    numerateur: totalPSH,
+                    denominateur: recrutementsGeneraux || 1,
+                    commentaire: commentaire
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                afficherResultats(totalPSH, recrutementsGeneraux, quotaCible, tauxRealisation, detailsParAnnee);
+            } else {
+                afficherNotif('Erreur: ' + (data.error || 'Erreur inconnue'), 'error');
+            }
+        } catch (err) {
+            afficherNotif('Erreur de connexion: ' + err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            icon.innerHTML = '✅';
+            texte.textContent = 'Soumettre et enregistrer';
+        }
+    }
+
+    function afficherResultats(totalPSH, recrutementsGeneraux, quotaCible, tauxRealisation, details) {
+        const section = document.getElementById('section-resultats');
+        section.style.display = 'block';
+
+        let statutMessage = '';
+        let statutCouleur = '';
+        if (totalPSH >= quotaCible) {
+            statutMessage = '✅ Quota atteint ! Objectif inclusion réussi.';
+            statutCouleur = '#2e7d32';
+        } else if (totalPSH >= quotaCible * 0.5) {
+            statutMessage = '⚠️ Quota partiellement atteint, des efforts restent à faire.';
+            statutCouleur = '#ff8c00';
+        } else {
+            statutMessage = '🔴 Quota non atteint, renforcer les actions d\'inclusion.';
+            statutCouleur = '#e53935';
+        }
+
+        document.getElementById('notif-result').innerHTML = `
+            <div class="notif notif-success">
+                ✅ Données enregistrées avec succès !<br>
+                <strong>Total PSH recrutés (2016-2026) : ${totalPSH.toLocaleString()} agents</strong><br>
+                ${statutMessage}
+            </div>
+        `;
+
+        // Générer le tableau des résultats par année
+        const tbody = document.getElementById('tbody-resultats');
+        tbody.innerHTML = '';
+        
+        for (let annee of annees) {
+            let totalAnnee = 0;
+            for (let categorie of categoriesHandicap) {
+                totalAnnee += recrutementsPSH[annee][categorie] || 0;
+            }
+            
+            let statutAnnee = '';
+            let quotaAnnee = Math.floor((recrutementsGeneraux / 11) * QUOTA_POURCENT / 100); // approximation
+            if (totalAnnee >= quotaAnnee && quotaAnnee > 0) statutAnnee = '✅ Atteint';
+            else if (totalAnnee > 0) statutAnnee = '⚠️ Partiel';
+            else statutAnnee = '❌ Non atteint';
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${annee}</td>
+                <td><strong>${totalAnnee}</strong></td>
+                <td>${Math.floor(recrutementsGeneraux / 11).toLocaleString()}</td>
+                <td>${recrutementsGeneraux > 0 ? ((totalAnnee / (recrutementsGeneraux / 11)) * 100).toFixed(1) + '%' : '—'}</td>
+                <td style="color: ${totalAnnee > 0 ? '#2e7d32' : '#e53935'}; font-weight: bold;">${statutAnnee}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        document.getElementById('result-cards').innerHTML = `
+            <div class="result-card"><div class="rc-value">${totalPSH.toLocaleString()}</div><div class="rc-label">PSH recrutés (cumul)</div></div>
+            <div class="result-card"><div class="rc-value">${recrutementsGeneraux.toLocaleString()}</div><div class="rc-label">Recrutements totaux</div></div>
+            <div class="result-card"><div class="rc-value">${quotaCible.toLocaleString()}</div><div class="rc-label">Quota cible (5%)</div></div>
+            <div class="result-card"><div class="rc-value" style="color:${tauxRealisation >= 100 ? '#ffd700' : 'white'}">${tauxRealisation}%</div><div class="rc-label">Taux réalisation</div></div>
+        `;
+
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function afficherNotif(message, type) {
+        const section = document.getElementById('section-resultats');
+        section.style.display = 'block';
+        document.getElementById('notif-result').innerHTML = `<div class="notif notif-${type}">${message}</div>`;
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+</script>
+{% endblock %}
+</body>
+</html>

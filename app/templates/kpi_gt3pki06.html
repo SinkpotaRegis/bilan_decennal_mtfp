@@ -1,0 +1,1236 @@
+{% extends "base.html" %}
+
+{% block titre %}GT2PKI05 — Liquidation des pensions{% endblock %}
+
+{% block extra_css %}
+
+    <style>
+        /* ===== RESET & BASE ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            color: #1a1a2e;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* ===== EN-TÊTE ===== */
+        .header {
+            background: linear-gradient(135deg, #006633 0%, #008844 100%);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header h1 { font-size: 1.3rem; font-weight: 700; }
+        .header p { font-size: 0.85rem; opacity: 0.9; margin-top: 4px; }
+        .badge-code {
+            background: rgba(255,255,255,0.2);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1rem;
+            letter-spacing: 1px;
+        }
+
+        /* ===== NAVIGATION ===== */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .nav { display: flex; gap: 10px; flex-wrap: wrap; }
+        .nav a {
+            background: white;
+            padding: 8px 18px;
+            text-decoration: none;
+            border-radius: 8px;
+            color: #006633;
+            font-weight: bold;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+        .nav a:hover, .nav a.active {
+            background: #006633;
+            color: white;
+        }
+
+        /* ===== FICHE KPI (résumé en haut) ===== */
+        .fiche-kpi {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #006633;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .fiche-kpi h2 {
+            color: #006633;
+            font-size: 1rem;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .fiche-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+        .fiche-item { display: flex; flex-direction: column; gap: 2px; }
+        .fiche-item label { color: #888; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .fiche-item span { color: #333; font-weight: 500; }
+
+        /* ===== FORMULE VISUELLE ===== */
+        .formule-box {
+            background: #f8fdf9;
+            border: 1px dashed #006633;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: #006633;
+            text-align: center;
+        }
+        .formule-box strong { font-size: 0.9rem; }
+
+        /* ===== SECTION SAISIE PRINCIPALE ===== */
+        .saisie-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .saisie-section h2 {
+            color: #006633;
+            font-size: 1.05rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e8f5e9;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ===== SÉLECTEUR D'ANNÉE ===== */
+        .annee-selector {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .annee-selector label {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.95rem;
+        }
+        .annee-selector select {
+            padding: 10px 16px;
+            border: 2px solid #006633;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: #006633;
+            font-weight: bold;
+            background: white;
+            cursor: pointer;
+            outline: none;
+            min-width: 120px;
+        }
+        .annee-selector select:focus { box-shadow: 0 0 0 3px rgba(0,102,51,0.15); }
+
+        /* ===== ONGLETS DES ANNÉES AJOUTÉES ===== */
+        .annees-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .annee-tab {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 2px solid #ddd;
+            background: #f5f5f5;
+            color: #888;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .annee-tab.active {
+            background: #006633;
+            color: white;
+            border-color: #006633;
+        }
+        .annee-tab .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #66bb6a;
+        }
+        .annee-tab.active .dot { background: white; }
+
+        /* ===== ZONE DES CONCOURS ===== */
+        #zone-concours { display: none; } /* cachée jusqu'au choix de l'année */
+
+        /* ===== CARTE CONCOURS ===== */
+        .concours-card {
+            background: #fafffe;
+            border: 1px solid #c8e6c9;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 16px;
+            position: relative;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .concours-card .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .concours-card .numero {
+            background: #006633;
+            color: white;
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; font-weight: bold;
+        }
+        .concours-card .titre-card {
+            font-weight: 600;
+            color: #006633;
+            font-size: 0.9rem;
+            flex: 1;
+            margin-left: 10px;
+        }
+        .btn-supprimer {
+            background: none;
+            border: 1px solid #ffcccc;
+            color: #e53935;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-supprimer:hover { background: #ffebee; }
+
+        /* ===== GRILLE DE CHAMPS ===== */
+        .fields-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+            align-items: end;
+        }
+        .field-group { display: flex; flex-direction: column; gap: 5px; }
+        .field-group label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .field-group input {
+            padding: 9px 12px;
+            border: 1.5px solid #ddd;
+            border-radius: 7px;
+            font-size: 0.88rem;
+            color: #333;
+            outline: none;
+            transition: border-color 0.2s;
+            background: white;
+        }
+        .field-group input:focus { border-color: #006633; box-shadow: 0 0 0 3px rgba(0,102,51,0.1); }
+        .field-group input[readonly] {
+            background: #e8f5e9;
+            border-color: #a5d6a7;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+
+        /* ===== RÉSULTAT INTERMÉDIAIRE (différence de dates) ===== */
+        .resultat-diff {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: #e8f5e9;
+            border-radius: 8px;
+            border: 1px solid #a5d6a7;
+            font-size: 0.85rem;
+            color: #2e7d32;
+            font-weight: 600;
+            min-height: 40px;
+        }
+        .resultat-diff .jours-nb {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #006633;
+        }
+
+        /* ===== BOUTONS ===== */
+        .btn-ajouter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            color: #006633;
+            border: 2px dashed #006633;
+            padding: 12px 22px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.2s;
+            width: 100%;
+            justify-content: center;
+        }
+        .btn-ajouter:hover {
+            background: #e8f5e9;
+            border-style: solid;
+        }
+
+        /* ===== RÉSUMÉ PAR ANNÉE (bandeau sous les concours) ===== */
+        .resume-annee {
+            margin-top: 16px;
+            background: #f0fff4;
+            border: 1px solid #66bb6a;
+            border-radius: 8px;
+            padding: 14px 18px;
+            display: none; /* affiché dès qu'il y a au moins 1 concours */
+        }
+        .resume-annee .resume-grid {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .resume-stat { display: flex; flex-direction: column; }
+        .resume-stat .rs-label { font-size: 0.75rem; color: #666; text-transform: uppercase; }
+        .resume-stat .rs-value { font-size: 1.4rem; font-weight: 800; color: #006633; }
+        .resume-stat .rs-unit { font-size: 0.75rem; color: #888; }
+
+        /* ===== BOUTON SOUMETTRE ===== */
+        .section-soumettre {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: none; /* visible seulement quand il y a des données */
+        }
+        .section-soumettre h2 {
+            color: #006633;
+            font-size: 1.05rem;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e8f5e9;
+        }
+
+        /* ===== TABLEAU RÉCAPITULATIF AVANT SOUMISSION ===== */
+        .recap-table-wrapper { overflow-x: auto; margin-bottom: 18px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        th {
+            background: #006633;
+            color: white;
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+        }
+        td {
+            padding: 9px 14px;
+            border-bottom: 1px solid #e8f5e9;
+            color: #333;
+        }
+        tr:nth-child(even) td { background: #f8fdf9; }
+        tr:hover td { background: #e8f5e9; }
+        .td-total {
+            font-weight: bold;
+            color: #006633;
+        }
+        tr.tr-total td {
+            background: #e8f5e9;
+            font-weight: bold;
+            color: #006633;
+            border-top: 2px solid #006633;
+        }
+
+        /* ===== BOUTON SOUMETTRE PRINCIPAL ===== */
+        .btn-soumettre {
+            background: linear-gradient(135deg, #006633, #008844);
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-soumettre:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(0,102,51,0.3); }
+        .btn-soumettre:active { transform: translateY(0); }
+        .btn-soumettre:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        /* ===== RÉSULTATS APRÈS SOUMISSION ===== */
+        #section-resultats {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: none;
+        }
+        #section-resultats h2 {
+            color: #006633;
+            font-size: 1.05rem;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e8f5e9;
+        }
+
+        /* ===== CARTES RÉSULTAT GLOBAL ===== */
+        .result-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .result-card {
+            background: linear-gradient(135deg, #006633, #1b8040);
+            color: white;
+            padding: 18px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .result-card .rc-label { font-size: 0.75rem; opacity: 0.85; margin-bottom: 6px; }
+        .result-card .rc-value { font-size: 2rem; font-weight: 800; }
+        .result-card .rc-unit { font-size: 0.75rem; opacity: 0.85; margin-top: 2px; }
+
+        /* ===== NOTIFICATION SUCCÈS ===== */
+        .notif {
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.88rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .notif-success {
+            background: #e8f5e9;
+            border: 1px solid #a5d6a7;
+            color: #2e7d32;
+        }
+        .notif-error {
+            background: #ffebee;
+            border: 1px solid #ffcdd2;
+            color: #c62828;
+        }
+
+        /* ===== LOADING SPINNER ===== */
+        .spinner {
+            width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 600px) {
+            .fields-grid { grid-template-columns: 1fr; }
+            .result-cards { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+{%endblock%}
+</head>
+<body>
+
+{% block content %}
+    <!-- EN-TÊTE -->
+    <div class="header">
+        <div>
+            <h1>📋 Collecte de données — Indicateur de délai</h1>
+            <p>Fonction Publique · Saisie des données annuelles des concours</p>
+        </div>
+        <div class="badge-code">GT3PKI06</div>
+    </div>
+
+    <!-- FICHE KPI (rappel des informations) -->
+    <div class="fiche-kpi">
+        <h2>ℹ️ Fiche de l'indicateur</h2>
+        <div class="fiche-grid">
+            <div class="fiche-item">
+                <label>Intitulé</label>
+                <span>Délai moyen de proclamation des résultats des concours</span>
+            </div>
+            <div class="fiche-item">
+                <label>Unité de mesure</label>
+                <span>Jours calendaires</span>
+            </div>
+            <div class="fiche-item">
+                <label>Fréquence</label>
+                <span>Annuelle</span>
+            </div>
+            <div class="fiche-item">
+                <label>Sources de vérification</label>
+                <span>PV de délibération, Communiqués officiels, SYGECO</span>
+            </div>
+        </div>
+        <div class="formule-box">
+            <strong>Formule : </strong>
+            ∑ (Date de proclamation officielle − Date de fin des épreuves) ÷ Nombre total de concours
+        </div>
+    </div>
+
+    <!-- ============================================================
+         SECTION PRINCIPALE DE SAISIE
+    ============================================================ -->
+    <div class="saisie-section">
+        <h2>✏️ Saisie des données par concours et par année</h2>
+
+        <!-- ÉTAPE 1 : choisir l'année -->
+        <div class="annee-selector">
+            <label for="select-annee">📅 Sélectionnez une année :</label>
+            <select id="select-annee" onchange="changerAnnee()">
+                <option value="">-- Choisir une année --</option>
+                <!-- Les années sont générées dynamiquement par JS ci-dessous -->
+            </select>
+            <!-- Petite info dynamique qui indique combien de concours ont déjà été saisis pour cette année -->
+            <span id="info-annee" style="font-size:0.82rem; color:#888;"></span>
+        </div>
+
+        <!-- Onglets des années déjà renseignées (navigation rapide) -->
+        <div class="annees-tabs" id="annees-tabs"></div>
+
+        <!-- ZONE QUI APPARAÎT APRÈS CHOIX DE L'ANNÉE -->
+        <div id="zone-concours">
+
+            <!-- Les cartes de concours seront insérées ici dynamiquement -->
+            <div id="liste-concours"></div>
+
+            <!-- Résumé automatique pour l'année en cours -->
+            <div class="resume-annee" id="resume-annee">
+                <div class="resume-grid">
+                    <div class="resume-stat">
+                        <span class="rs-label">Nombre de concours</span>
+                        <span class="rs-value" id="rs-nb-concours">0</span>
+                    </div>
+                    <div class="resume-stat">
+                        <span class="rs-label">Total des jours</span>
+                        <span class="rs-value" id="rs-total-jours">0</span>
+                        <span class="rs-unit">jours cumulés</span>
+                    </div>
+                    <div class="resume-stat">
+                        <span class="rs-label">Délai moyen (cette année)</span>
+                        <span class="rs-value" id="rs-moyenne">—</span>
+                        <span class="rs-unit">jours / concours</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bouton "Ajouter un autre concours" -->
+            <button class="btn-ajouter" onclick="ajouterConcours()">
+                ➕ Ajouter un autre concours pour <span id="label-annee-btn"></span>
+            </button>
+
+        </div>
+    </div>
+
+    <!-- ============================================================
+         SECTION RÉCAPITULATIF + BOUTON SOUMETTRE
+         Apparaît dès qu'il y a des données dans au moins une année
+    ============================================================ -->
+    <div class="section-soumettre" id="section-soumettre">
+        <h2>📤 Récapitulatif global — Prêt à soumettre</h2>
+
+        <!-- Tableau récap toutes années -->
+        <div class="recap-table-wrapper">
+            <table id="table-recap">
+                <thead>
+                    <tr>
+                        <th>Année</th>
+                        <th>Nb de concours</th>
+                        <th>Total des jours</th>
+                        <th>Délai moyen (jours)</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-recap"></tbody>
+                <tfoot id="tfoot-recap"></tfoot>
+            </table>
+        </div>
+
+        <button class="btn-soumettre" id="btn-soumettre" onclick="soumettreDonnees()">
+            <span id="btn-soumettre-icon">✅</span>
+            <span id="btn-soumettre-texte">Soumettre et enregistrer</span>
+        </button>
+    </div>
+
+    <!-- ============================================================
+         SECTION RÉSULTATS (après soumission réussie)
+    ============================================================ -->
+    <div id="section-resultats">
+        <h2>🏆 Résultats enregistrés</h2>
+        <div id="notif-result"></div>
+        <div class="result-cards" id="result-cards"></div>
+
+        <!-- Tableau détaillé des résultats -->
+        <div class="recap-table-wrapper">
+            <table id="table-resultats">
+                <thead>
+                    <tr>
+                        <th>Année</th>
+                        <th>Nb de concours</th>
+                        <th>Total des jours</th>
+                        <th>Délai moyen (jours)</th>
+                        <th>Statut</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-resultats"></tbody>
+            </table>
+        </div>
+    </div>
+{%endblock%}
+    <!-- ========================================================
+         JAVASCRIPT — Toute la logique dynamique de la page
+    ======================================================== -->
+{% block extra_js %}
+    <script>
+    /* ==========================================================
+       ÉTAT GLOBAL DE L'APPLICATION
+       Cet objet stocke toutes les données saisies.
+       Structure: donneesParAnnee[annee] = [
+           { type, dateFin, dateProclamation, nbJours },
+           ...
+       ]
+    ========================================================== */
+    const etat = {
+        anneeActive: null,           // L'année actuellement sélectionnée
+        donneesParAnnee: {},         // Toutes les données saisies, par année
+        kpiId: null                  // L'ID du KPI dans la BDD (récupéré via l'API)
+    };
+
+    /* ==========================================================
+       INITIALISATION — Au chargement de la page
+    ========================================================== */
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. Remplir le sélecteur d'années (de 2016 à 2026)
+        const selectAnnee = document.getElementById('select-annee');
+        for (let annee = 2026; annee >= 2016; annee--) {
+            const opt = document.createElement('option');
+            opt.value = annee;
+            opt.textContent = annee;
+            selectAnnee.appendChild(opt);
+        }
+
+        // 2. Récupérer l'ID du KPI GT3PKI06 depuis l'API
+        recupererIdKpi();
+
+        // 3. Mettre à jour le tableau récap
+        mettreAJourRecap();
+    });
+
+    /* ==========================================================
+       RÉCUPÉRER L'ID DU KPI DEPUIS LA BASE DE DONNÉES
+       On cherche le KPI dont le code est 'GT3PKI06'
+    ========================================================== */
+    async function recupererIdKpi() {
+        try {
+            const response = await fetch('/api/kpis');
+            const kpis = await response.json();
+            // On cherche le KPI par son code
+            const kpi = kpis.find(k => k.code === 'GT3PKI06');
+            if (kpi) {
+                etat.kpiId = kpi.id;
+                console.log('KPI GT3PKI06 trouvé, ID :', etat.kpiId);
+            } else {
+                console.warn('KPI GT3PKI06 non trouvé dans la base. La soumission créera les données de toute façon.');
+            }
+        } catch (err) {
+            console.error('Erreur récupération KPI:', err);
+        }
+    }
+
+    /* ==========================================================
+       CHANGER D'ANNÉE — Appelé quand on sélectionne une année
+    ========================================================== */
+    function changerAnnee() {
+        const select = document.getElementById('select-annee');
+        const annee = parseInt(select.value);
+
+        if (!annee) {
+            // L'utilisateur a sélectionné "-- Choisir une année --"
+            document.getElementById('zone-concours').style.display = 'none';
+            document.getElementById('info-annee').textContent = '';
+            etat.anneeActive = null;
+            return;
+        }
+
+        etat.anneeActive = annee;
+
+        // Créer la structure pour cette année si elle n'existe pas encore
+        if (!etat.donneesParAnnee[annee]) {
+            etat.donneesParAnnee[annee] = [];
+        }
+
+        // Afficher la zone de saisie des concours
+        document.getElementById('zone-concours').style.display = 'block';
+        document.getElementById('label-annee-btn').textContent = annee;
+
+        // Afficher les concours déjà saisis pour cette année
+        afficherConcoursAnnee(annee);
+        mettreAJourResumeAnnee();
+        mettreAJourRecap();
+        mettreAJourOnglets();
+        mettreAJourInfoAnnee(annee);
+    }
+
+    /* ==========================================================
+       AFFICHER LES CONCOURS D'UNE ANNÉE
+       Reconstruit la liste des cartes de concours depuis l'état
+    ========================================================== */
+    function afficherConcoursAnnee(annee) {
+        const liste = document.getElementById('liste-concours');
+        liste.innerHTML = ''; // vider
+
+        const concours = etat.donneesParAnnee[annee] || [];
+
+        if (concours.length === 0) {
+            // Aucun concours → créer automatiquement le premier
+            ajouterConcours();
+        } else {
+            // Re-créer les cartes pour chaque concours existant
+            concours.forEach((_, index) => {
+                creerCarteConcours(annee, index);
+            });
+        }
+    }
+
+    /* ==========================================================
+       AJOUTER UN NOUVEAU CONCOURS
+       Crée une nouvelle entrée dans l'état et une carte dans le DOM
+    ========================================================== */
+    function ajouterConcours() {
+        if (!etat.anneeActive) return;
+
+        const annee = etat.anneeActive;
+
+        // Ajouter une entrée vide dans l'état
+        etat.donneesParAnnee[annee].push({
+            type: '',
+            dateFin: '',
+            dateProclamation: '',
+            nbJours: null
+        });
+
+        const index = etat.donneesParAnnee[annee].length - 1;
+
+        // Créer la carte dans le DOM
+        creerCarteConcours(annee, index);
+        mettreAJourResumeAnnee();
+    }
+
+    /* ==========================================================
+       CRÉER UNE CARTE CONCOURS DANS LE DOM
+       Chaque carte contient : type, date fin, date proclamation,
+       et le calcul automatique de la différence en jours
+    ========================================================== */
+    function creerCarteConcours(annee, index) {
+        const liste = document.getElementById('liste-concours');
+        const data = etat.donneesParAnnee[annee][index];
+        const numero = index + 1;
+
+        // Créer l'élément div de la carte
+        const card = document.createElement('div');
+        card.className = 'concours-card';
+        card.id = `card-${annee}-${index}`;
+
+        card.innerHTML = `
+            <div class="card-header">
+                <div class="numero">${numero}</div>
+                <div class="titre-card">Concours n°${numero} — ${annee}</div>
+                ${index > 0 ? `<button class="btn-supprimer" onclick="supprimerConcours(${annee}, ${index})">✕ Supprimer</button>` : ''}
+            </div>
+
+            <div class="fields-grid">
+
+                <!-- Champ 1 : Type / Intitulé du concours -->
+                <div class="field-group" style="grid-column: span 2;">
+                    <label>Type / Intitulé du concours</label>
+                    <input
+                        type="text"
+                        id="type-${annee}-${index}"
+                        placeholder="Ex : Concours d'entrée à l'ENA, Concours de recrutement des infirmiers..."
+                        value="${data.type || ''}"
+                        oninput="mettreAJourChamp(${annee}, ${index}, 'type', this.value)"
+                    >
+                </div>
+
+                <!-- Champ 2 : Date de fin des épreuves -->
+                <div class="field-group">
+                    <label>📅 Date de fin des épreuves</label>
+                    <input
+                        type="date"
+                        id="datefin-${annee}-${index}"
+                        value="${data.dateFin || ''}"
+                        onchange="calculerDifference(${annee}, ${index})"
+                    >
+                </div>
+
+                <!-- Champ 3 : Date de proclamation officielle des résultats -->
+                <div class="field-group">
+                    <label>📅 Date de proclamation officielle des résultats</label>
+                    <input
+                        type="date"
+                        id="dateprocla-${annee}-${index}"
+                        value="${data.dateProclamation || ''}"
+                        onchange="calculerDifference(${annee}, ${index})"
+                    >
+                </div>
+
+                <!-- Champ 4 : Résultat automatique (différence en jours) - readonly -->
+                <div class="field-group">
+                    <label>⏱ Délai calculé automatiquement</label>
+                    <div class="resultat-diff" id="result-diff-${annee}-${index}">
+                        ${data.nbJours !== null
+                            ? `<span class="jours-nb">${data.nbJours}</span>&nbsp;jours`
+                            : '<span style="color:#aaa; font-weight:normal">Renseignez les deux dates</span>'
+                        }
+                    </div>
+                </div>
+
+            </div>
+        `;
+
+        liste.appendChild(card);
+    }
+
+    /* ==========================================================
+       CALCULER LA DIFFÉRENCE ENTRE LES DEUX DATES
+       Appelé automatiquement quand l'une des dates change
+    ========================================================== */
+    function calculerDifference(annee, index) {
+        const dateFin = document.getElementById(`datefin-${annee}-${index}`).value;
+        const dateProcla = document.getElementById(`dateprocla-${annee}-${index}`).value;
+
+        // Récupérer la div du résultat
+        const divResult = document.getElementById(`result-diff-${annee}-${index}`);
+
+        // Sauvegarder les dates dans l'état
+        etat.donneesParAnnee[annee][index].dateFin = dateFin;
+        etat.donneesParAnnee[annee][index].dateProclamation = dateProcla;
+
+        if (dateFin && dateProcla) {
+            const tsDebut = new Date(dateFin).getTime();
+            const tsFin   = new Date(dateProcla).getTime();
+
+            if (tsFin < tsDebut) {
+                // Erreur logique : la proclamation ne peut pas être avant la fin des épreuves
+                divResult.innerHTML = `<span style="color:#e53935">⚠️ La date de proclamation doit être après la fin des épreuves</span>`;
+                etat.donneesParAnnee[annee][index].nbJours = null;
+            } else {
+                // Calcul de la différence en jours calendaires
+                const diffMs = tsFin - tsDebut;
+                const diffJours = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+                // Afficher le résultat
+                divResult.innerHTML = `<span class="jours-nb">${diffJours}</span>&nbsp;jours`;
+
+                // Sauvegarder dans l'état
+                etat.donneesParAnnee[annee][index].nbJours = diffJours;
+            }
+        } else {
+            // Une des deux dates manque encore
+            divResult.innerHTML = `<span style="color:#aaa; font-weight:normal">Renseignez les deux dates</span>`;
+            etat.donneesParAnnee[annee][index].nbJours = null;
+        }
+
+        // Recalculer le résumé de l'année
+        mettreAJourResumeAnnee();
+        mettreAJourRecap();
+    }
+
+    /* ==========================================================
+       METTRE À JOUR UN CHAMP TEXTE DANS L'ÉTAT
+       Utilisé pour le champ "Type de concours"
+    ========================================================== */
+    function mettreAJourChamp(annee, index, champ, valeur) {
+        etat.donneesParAnnee[annee][index][champ] = valeur;
+    }
+
+    /* ==========================================================
+       SUPPRIMER UN CONCOURS
+    ========================================================== */
+    function supprimerConcours(annee, index) {
+        if (!confirm(`Supprimer le concours n°${index + 1} de ${annee} ?`)) return;
+
+        // Retirer de l'état
+        etat.donneesParAnnee[annee].splice(index, 1);
+
+        // Si plus aucun concours pour cette année, supprimer l'entrée de l'année
+        if (etat.donneesParAnnee[annee].length === 0) {
+            delete etat.donneesParAnnee[annee];
+        }
+
+        // Reconstruire l'affichage
+        afficherConcoursAnnee(annee);
+        mettreAJourResumeAnnee();
+        mettreAJourRecap();
+        mettreAJourOnglets();
+    }
+
+    /* ==========================================================
+       METTRE À JOUR LE RÉSUMÉ DE L'ANNÉE ACTIVE
+       Affiche le nombre de concours, total des jours et moyenne
+    ========================================================== */
+    function mettreAJourResumeAnnee() {
+        const annee = etat.anneeActive;
+        if (!annee || !etat.donneesParAnnee[annee]) return;
+
+        const concours = etat.donneesParAnnee[annee];
+
+        // Filtrer seulement les concours qui ont un résultat valide
+        const valides = concours.filter(c => c.nbJours !== null);
+
+        const nbTotal = concours.length;
+        const totalJours = valides.reduce((sum, c) => sum + c.nbJours, 0);
+        const moyenne = valides.length > 0 ? (totalJours / valides.length).toFixed(1) : '—';
+
+        document.getElementById('rs-nb-concours').textContent = nbTotal;
+        document.getElementById('rs-total-jours').textContent = totalJours;
+        document.getElementById('rs-moyenne').textContent = moyenne;
+
+        // Afficher ou cacher le bloc résumé
+        const resumeDiv = document.getElementById('resume-annee');
+        resumeDiv.style.display = nbTotal > 0 ? 'block' : 'none';
+    }
+
+    /* ==========================================================
+       METTRE À JOUR LES ONGLETS DES ANNÉES
+       Un onglet cliquable par année qui a au moins 1 concours
+    ========================================================== */
+    function mettreAJourOnglets() {
+        const container = document.getElementById('annees-tabs');
+        container.innerHTML = '';
+
+        const annees = Object.keys(etat.donneesParAnnee).map(Number).sort();
+
+        annees.forEach(annee => {
+            const concours = etat.donneesParAnnee[annee];
+            const nbValides = concours.filter(c => c.nbJours !== null).length;
+
+            const tab = document.createElement('div');
+            tab.className = `annee-tab ${annee === etat.anneeActive ? 'active' : ''}`;
+            tab.innerHTML = `
+                <span class="dot"></span>
+                ${annee} (${concours.length} concours${nbValides < concours.length ? `, ${nbValides} calculés` : ''})
+            `;
+            tab.onclick = () => {
+                // Naviguer vers cette année
+                document.getElementById('select-annee').value = annee;
+                etat.anneeActive = annee;
+                afficherConcoursAnnee(annee);
+                document.getElementById('zone-concours').style.display = 'block';
+                document.getElementById('label-annee-btn').textContent = annee;
+                mettreAJourResumeAnnee();
+                mettreAJourOnglets();
+                mettreAJourInfoAnnee(annee);
+            };
+            container.appendChild(tab);
+        });
+    }
+
+    /* ==========================================================
+       METTRE À JOUR L'INFO SOUS LE SÉLECTEUR D'ANNÉE
+    ========================================================== */
+    function mettreAJourInfoAnnee(annee) {
+        const info = document.getElementById('info-annee');
+        const concours = etat.donneesParAnnee[annee] || [];
+        if (concours.length === 0) {
+            info.textContent = 'Aucun concours saisi pour cette année';
+        } else {
+            const nbValides = concours.filter(c => c.nbJours !== null).length;
+            info.textContent = `${concours.length} concours saisi(s) — ${nbValides} avec délai calculé`;
+        }
+    }
+
+    /* ==========================================================
+       METTRE À JOUR LE TABLEAU RÉCAPITULATIF GLOBAL
+       Affiché dans la section "Prêt à soumettre"
+    ========================================================== */
+    function mettreAJourRecap() {
+        const tbody = document.getElementById('tbody-recap');
+        const tfoot = document.getElementById('tfoot-recap');
+        tbody.innerHTML = '';
+        tfoot.innerHTML = '';
+
+        const annees = Object.keys(etat.donneesParAnnee).map(Number).sort();
+
+        if (annees.length === 0) {
+            document.getElementById('section-soumettre').style.display = 'none';
+            return;
+        }
+
+        let grandTotalJours = 0;
+        let grandTotalConcours = 0;
+
+        annees.forEach(annee => {
+            const concours = etat.donneesParAnnee[annee];
+            const valides = concours.filter(c => c.nbJours !== null);
+            const totalJours = valides.reduce((sum, c) => sum + c.nbJours, 0);
+            const moyenne = valides.length > 0 ? (totalJours / valides.length).toFixed(1) : '—';
+
+            grandTotalJours += totalJours;
+            grandTotalConcours += valides.length;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${annee}</strong></td>
+                <td>${concours.length} concours (${valides.length} avec données)</td>
+                <td>${totalJours} jours</td>
+                <td class="td-total">${moyenne} jours/concours</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Ligne TOTAL
+        const moyenneGlobale = grandTotalConcours > 0
+            ? (grandTotalJours / grandTotalConcours).toFixed(1)
+            : '—';
+
+        tfoot.innerHTML = `
+            <tr class="tr-total">
+                <td>TOTAL GLOBAL</td>
+                <td>${grandTotalConcours} concours</td>
+                <td>${grandTotalJours} jours</td>
+                <td>${moyenneGlobale} jours/concours</td>
+            </tr>
+        `;
+
+        // Afficher la section soumettre
+        document.getElementById('section-soumettre').style.display = 'block';
+    }
+
+    /* ==========================================================
+       SOUMETTRE LES DONNÉES À L'API
+       Envoie les données agrégées par année vers l'endpoint Flask
+       qui met à jour la table kpis_annuels dans SQLite
+    ========================================================== */
+    async function soumettreDonnees() {
+        const btn = document.getElementById('btn-soumettre');
+        const icon = document.getElementById('btn-soumettre-icon');
+        const texte = document.getElementById('btn-soumettre-texte');
+
+        // Vérifier qu'il y a des données à soumettre
+        const annees = Object.keys(etat.donneesParAnnee).map(Number).sort();
+        if (annees.length === 0) {
+            afficherNotif('Aucune donnée à soumettre.', 'error');
+            return;
+        }
+
+        // Désactiver le bouton pendant la soumission
+        btn.disabled = true;
+        icon.innerHTML = '<div class="spinner"></div>';
+        texte.textContent = 'Enregistrement en cours...';
+
+        const resultats = [];
+        let erreurs = 0;
+
+        // Pour chaque année, calculer les valeurs agrégées et envoyer à l'API
+        for (const annee of annees) {
+            const concours = etat.donneesParAnnee[annee];
+            const valides = concours.filter(c => c.nbJours !== null);
+
+            if (valides.length === 0) {
+                resultats.push({ annee, statut: 'ignoré', raison: 'Aucun délai calculé' });
+                continue;
+            }
+
+            const totalJours = valides.reduce((sum, c) => sum + c.nbJours, 0);
+            const nbConcours = valides.length;
+            const moyenneJours = parseFloat((totalJours / nbConcours).toFixed(2));
+
+            // Préparer le commentaire avec le détail des concours
+            const details = valides
+                .map((c, i) => `${c.type || 'Concours '+(i+1)} : ${c.nbJours}j`)
+                .join(' | ');
+            const commentaire = `${nbConcours} concours — Détail : ${details}`;
+
+            try {
+                // Appel API Flask : update de kpis_annuels
+                // numerateur = totalJours, denominateur = nbConcours → valeur_calculee = délai moyen
+                const response = await fetch(`/api/kpis/annuel/update/${etat.kpiId || 1}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        annee: annee,
+                        numerateur: totalJours,         // ∑ des jours
+                        denominateur: nbConcours,       // Nb de concours
+                        commentaire: commentaire
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    resultats.push({
+                        annee,
+                        nbConcours,
+                        totalJours,
+                        moyenneJours: moyenneJours,
+                        statut: 'success'
+                    });
+                } else {
+                    resultats.push({ annee, statut: 'erreur', raison: data.error });
+                    erreurs++;
+                }
+            } catch (err) {
+                resultats.push({ annee, statut: 'erreur', raison: err.message });
+                erreurs++;
+            }
+        }
+
+        // Remettre le bouton
+        btn.disabled = false;
+        icon.textContent = erreurs === 0 ? '✅' : '⚠️';
+        texte.textContent = erreurs === 0 ? 'Soumis avec succès' : 'Soumis avec des erreurs';
+
+        // Afficher les résultats
+        afficherResultats(resultats, erreurs);
+    }
+
+    /* ==========================================================
+       AFFICHER LES RÉSULTATS APRÈS SOUMISSION
+    ========================================================== */
+    function afficherResultats(resultats, erreurs) {
+        const section = document.getElementById('section-resultats');
+        section.style.display = 'block';
+
+        // Notification principale
+        const notifDiv = document.getElementById('notif-result');
+        if (erreurs === 0) {
+            notifDiv.innerHTML = `
+                <div class="notif notif-success">
+                    ✅ Toutes les données ont été enregistrées avec succès dans la base de données.
+                    Elles sont maintenant visibles sur la page de collecte dans les champs correspondants.
+                </div>
+            `;
+        } else {
+            notifDiv.innerHTML = `
+                <div class="notif notif-error">
+                    ⚠️ ${erreurs} erreur(s) lors de l'enregistrement. Vérifiez les détails ci-dessous.
+                </div>
+            `;
+        }
+
+        // Cartes de résumé global
+        const succes = resultats.filter(r => r.statut === 'success');
+        const totalConcoursGlobal = succes.reduce((s, r) => s + r.nbConcours, 0);
+        const totalJoursGlobal = succes.reduce((s, r) => s + r.totalJours, 0);
+        const moyenneGlobale = totalConcoursGlobal > 0
+            ? (totalJoursGlobal / totalConcoursGlobal).toFixed(1)
+            : '—';
+
+        document.getElementById('result-cards').innerHTML = `
+            <div class="result-card">
+                <div class="rc-label">Années enregistrées</div>
+                <div class="rc-value">${succes.length}</div>
+                <div class="rc-unit">années</div>
+            </div>
+            <div class="result-card">
+                <div class="rc-label">Total concours</div>
+                <div class="rc-value">${totalConcoursGlobal}</div>
+                <div class="rc-unit">concours</div>
+            </div>
+            <div class="result-card">
+                <div class="rc-label">Total jours cumulés</div>
+                <div class="rc-value">${totalJoursGlobal}</div>
+                <div class="rc-unit">jours</div>
+            </div>
+            <div class="result-card">
+                <div class="rc-label">Délai moyen global</div>
+                <div class="rc-value">${moyenneGlobale}</div>
+                <div class="rc-unit">jours / concours</div>
+            </div>
+        `;
+
+        // Tableau détaillé
+        const tbody = document.getElementById('tbody-resultats');
+        tbody.innerHTML = '';
+        resultats.forEach(r => {
+            const tr = document.createElement('tr');
+            if (r.statut === 'success') {
+                tr.innerHTML = `
+                    <td><strong>${r.annee}</strong></td>
+                    <td>${r.nbConcours}</td>
+                    <td>${r.totalJours} jours</td>
+                    <td class="td-total">${r.moyenneJours} jours</td>
+                    <td style="color:#2e7d32; font-weight:600;">✅ Enregistré</td>
+                `;
+            } else if (r.statut === 'ignoré') {
+                tr.innerHTML = `
+                    <td><strong>${r.annee}</strong></td>
+                    <td colspan="3" style="color:#888">${r.raison}</td>
+                    <td style="color:#888">⏭ Ignoré</td>
+                `;
+            } else {
+                tr.innerHTML = `
+                    <td><strong>${r.annee}</strong></td>
+                    <td colspan="3" style="color:#e53935">${r.raison}</td>
+                    <td style="color:#e53935">❌ Erreur</td>
+                `;
+            }
+            tbody.appendChild(tr);
+        });
+
+        // Faire défiler vers les résultats
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    /* ==========================================================
+       AFFICHER UNE NOTIFICATION (petit utilitaire)
+    ========================================================== */
+    function afficherNotif(message, type) {
+        const notifDiv = document.getElementById('notif-result');
+        const section = document.getElementById('section-resultats');
+        section.style.display = 'block';
+        notifDiv.innerHTML = `
+            <div class="notif notif-${type}">${message}</div>
+        `;
+    }
+
+    </script>
+{%endblock%}
+</body>
+</html>

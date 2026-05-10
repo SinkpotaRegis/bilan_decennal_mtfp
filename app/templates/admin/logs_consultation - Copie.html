@@ -1,0 +1,464 @@
+{% extends "admin_base.html" %}
+
+{% block titre %}Consultation des Logs{% endblock %}
+
+{% block page_title %}📜 Journalisation des actions{% endblock %}
+{% block page_subtitle %}Historique complet de toutes les actions sur la plateforme{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Filtres */
+    .filters-card {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .filters-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        align-items: flex-end;
+    }
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        flex: 1;
+        min-width: 150px;
+    }
+    .filter-group label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #666;
+        text-transform: uppercase;
+    }
+    .filter-group input, .filter-group select {
+        padding: 10px 12px;
+        border: 1.5px solid #ddd;
+        border-radius: 10px;
+        font-size: 0.85rem;
+    }
+    .filter-group input:focus, .filter-group select:focus {
+        border-color: #006633;
+        outline: none;
+    }
+    .btn-filter {
+        background: #006633;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    .btn-filter:hover { background: #008844; }
+    .btn-reset {
+        background: #e0e0e0;
+        color: #333;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    .btn-export {
+        background: #ff8c00;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    
+    /* Statistiques */
+    .stats-logs {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .stat-card .value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #006633;
+    }
+    .stat-card .label {
+        font-size: 0.7rem;
+        color: #666;
+        margin-top: 5px;
+    }
+    
+    /* Tableau */
+    .table-container {
+        background: white;
+        border-radius: 16px;
+        overflow-x: auto;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    th {
+        background: #006633;
+        color: white;
+        padding: 14px;
+        text-align: left;
+    }
+    td {
+        padding: 12px 14px;
+        border-bottom: 1px solid #e8f5e9;
+        font-size: 0.85rem;
+    }
+    tr:hover td {
+        background: #f0fff4;
+    }
+    
+    /* Badge action */
+    .badge-action {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    .badge-vert { background: #e8f5e9; color: #2e7d32; }
+    .badge-orange { background: #fff3e0; color: #e65100; }
+    .badge-rouge { background: #ffebee; color: #e53935; }
+    .badge-bleu { background: #e3f2fd; color: #1565c0; }
+    .badge-violet { background: #f3e5f5; color: #7b1fa2; }
+    
+    /* Pagination */
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 25px;
+        flex-wrap: wrap;
+    }
+    .page-btn {
+        background: white;
+        border: 1px solid #ddd;
+        padding: 8px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .page-btn:hover {
+        background: #006633;
+        color: white;
+    }
+    .page-btn.active {
+        background: #006633;
+        color: white;
+    }
+    .page-btn.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .log-detail {
+        max-width: 300px;
+        font-size: 0.75rem;
+        color: #666;
+        word-break: break-word;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Filtres -->
+<div class="filters-card">
+    <div class="filters-row">
+        <div class="filter-group">
+            <label>📅 Date début</label>
+            <input type="date" id="filter-date-debut">
+        </div>
+        <div class="filter-group">
+            <label>📅 Date fin</label>
+            <input type="date" id="filter-date-fin">
+        </div>
+        <div class="filter-group">
+            <label>👤 Utilisateur</label>
+            <select id="filter-user">
+                <option value="">Tous</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>🎯 Action</label>
+            <select id="filter-action">
+                <option value="">Toutes</option>
+                <option value="UPDATE_KPI">Modification KPI</option>
+                <option value="CREATE_USER">Création utilisateur</option>
+                <option value="UPDATE_USER">Modification utilisateur</option>
+                <option value="DELETE_USER">Suppression utilisateur</option>
+                <option value="EXPORT_EXCEL">Export Excel</option>
+                <option value="EXPORT_PDF">Export PDF</option>
+                <option value="UPLOAD_FILE">Upload fichier</option>
+                <option value="DELETE_FILE">Suppression fichier</option>
+                <option value="RESET_PASSWORD">Réinitialisation mot de passe</option>
+            </select>
+        </div>
+        <button class="btn-filter" onclick="loadLogs(1)">🔍 Filtrer</button>
+        <button class="btn-reset" onclick="resetFilters()">🔄 Réinitialiser</button>
+        <button class="btn-export" onclick="exportLogs()">📎 Exporter CSV</button>
+    </div>
+</div>
+
+<!-- Statistiques -->
+<div class="stats-logs" id="stats-logs">
+    <div class="stat-card">
+        <div class="value" id="stat-total">0</div>
+        <div class="label">Total actions</div>
+    </div>
+    <div class="stat-card">
+        <div class="value" id="stat-modifs">0</div>
+        <div class="label">Modifications</div>
+    </div>
+    <div class="stat-card">
+        <div class="value" id="stat-exports">0</div>
+        <div class="label">Exports</div>
+    </div>
+    <div class="stat-card">
+        <div class="value" id="stat-uploads">0</div>
+        <div class="label">Uploads</div>
+    </div>
+</div>
+
+<!-- Tableau -->
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Date & Heure</th>
+                <th>Utilisateur</th>
+                <th>Action</th>
+                <th>Détails</th>
+                <th>IP</th>
+            </tr>
+        </thead>
+        <tbody id="logs-tbody">
+            <tr><td colspan="5" class="loading">🔄 Chargement en cours...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+<div class="pagination" id="pagination"></div>
+
+<script>
+let currentPage = 1;
+let totalPages = 1;
+
+function getBadgeClass(action) {
+    const actions = {
+        'UPDATE_KPI': 'badge-orange',
+        'CREATE_USER': 'badge-vert',
+        'UPDATE_USER': 'badge-orange',
+        'DELETE_USER': 'badge-rouge',
+        'EXPORT_EXCEL': 'badge-bleu',
+        'EXPORT_PDF': 'badge-bleu',
+        'UPLOAD_FILE': 'badge-violet',
+        'DELETE_FILE': 'badge-rouge',
+        'RESET_PASSWORD': 'badge-vert'
+    };
+    return actions[action] || 'badge-bleu';
+}
+
+function loadUsers() {
+    fetch('/admin/api/utilisateurs')
+        .then(res => res.json())
+        .then(users => {
+            const select = document.getElementById('filter-user');
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = user.username + ' (' + user.role + ')';
+                select.appendChild(option);
+            });
+        })
+        .catch(err => console.error('Erreur chargement users:', err));
+}
+
+function loadLogs(page) {
+    page = page || 1;
+    currentPage = page;
+    
+    const tbody = document.getElementById('logs-tbody');
+    tbody.innerHTML = '<tr><td colspan="5" class="loading">🔄 Chargement...</td></tr>';
+    
+    const params = new URLSearchParams();
+    params.append('page', page);
+    params.append('per_page', 50);
+    
+    const dateDebut = document.getElementById('filter-date-debut').value;
+    const dateFin = document.getElementById('filter-date-fin').value;
+    const userId = document.getElementById('filter-user').value;
+    const action = document.getElementById('filter-action').value;
+    
+    if (dateDebut) params.append('date_debut', dateDebut);
+    if (dateFin) params.append('date_fin', dateFin);
+    if (userId) params.append('user_id', userId);
+    if (action) params.append('action', action);
+    
+    fetch('/admin/api/logs?' + params.toString())
+        .then(res => res.json())
+        .then(data => {
+            console.log('Logs reçus:', data);
+            displayLogs(data.logs || []);
+            updatePagination(data);
+            updateStats(data.logs || []);
+        })
+        .catch(err => {
+            console.error('Erreur:', err);
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#e53935;">❌ Erreur de chargement</td></tr>';
+        });
+}
+
+function displayLogs(logs) {
+    const tbody = document.getElementById('logs-tbody');
+    tbody.innerHTML = '';
+    
+    if (!logs || logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">📭 Aucun log trouvé</td></tr>';
+        return;
+    }
+    
+    logs.forEach(log => {
+        const row = tbody.insertRow();
+        const badgeClass = getBadgeClass(log.action);
+        
+        let details = log.details || '—';
+        if (details.length > 80) {
+            details = details.substring(0, 80) + '...';
+        }
+        
+        row.innerHTML = `
+            <td style="white-space: nowrap;">${log.created_at || '—'}</td>
+            <td><strong>${escapeHtml(log.user_name || 'Inconnu')}</strong></td>
+            <td><span class="badge-action ${badgeClass}">${escapeHtml(log.action || '—')}</span></td>
+            <td class="log-detail" title="${escapeHtml(log.details || '')}">${escapeHtml(details)}</td>
+            <td>${log.ip_address || '—'}</td>
+        `;
+    });
+}
+
+function updatePagination(data) {
+    const container = document.getElementById('pagination');
+    container.innerHTML = '';
+    
+    const current = data.page || 1;
+    const total = data.total_pages || 1;
+    totalPages = total;
+    
+    if (total <= 1) return;
+    
+    // Précédent
+    const prev = document.createElement('button');
+    prev.textContent = '◀';
+    prev.className = 'page-btn' + (current <= 1 ? ' disabled' : '');
+    prev.onclick = () => { if (current > 1) loadLogs(current - 1); };
+    container.appendChild(prev);
+    
+    // Pages
+    for (let i = 1; i <= Math.min(total, 5); i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        btn.className = 'page-btn' + (i === current ? ' active' : '');
+        btn.onclick = () => loadLogs(i);
+        container.appendChild(btn);
+    }
+    
+    if (total > 5) {
+        const dots = document.createElement('span');
+        dots.textContent = '...';
+        dots.style.padding = '8px';
+        container.appendChild(dots);
+        
+        const last = document.createElement('button');
+        last.textContent = total;
+        last.className = 'page-btn' + (total === current ? ' active' : '');
+        last.onclick = () => loadLogs(total);
+        container.appendChild(last);
+    }
+    
+    // Suivant
+    const next = document.createElement('button');
+    next.textContent = '▶';
+    next.className = 'page-btn' + (current >= total ? ' disabled' : '');
+    next.onclick = () => { if (current < total) loadLogs(current + 1); };
+    container.appendChild(next);
+}
+
+function updateStats(logs) {
+    let modifications = 0;
+    let exports = 0;
+    let uploads = 0;
+    
+    logs.forEach(log => {
+        const action = log.action || '';
+        if (action === 'UPDATE_KPI' || action === 'UPDATE_USER') modifications++;
+        if (action === 'EXPORT_EXCEL' || action === 'EXPORT_PDF') exports++;
+        if (action === 'UPLOAD_FILE') uploads++;
+    });
+    
+    document.getElementById('stat-total').textContent = logs.length;
+    document.getElementById('stat-modifs').textContent = modifications;
+    document.getElementById('stat-exports').textContent = exports;
+    document.getElementById('stat-uploads').textContent = uploads;
+}
+
+function resetFilters() {
+    document.getElementById('filter-date-debut').value = '';
+    document.getElementById('filter-date-fin').value = '';
+    document.getElementById('filter-user').value = '';
+    document.getElementById('filter-action').value = '';
+    loadLogs(1);
+}
+
+function exportLogs() {
+    const params = new URLSearchParams();
+    const dateDebut = document.getElementById('filter-date-debut').value;
+    const dateFin = document.getElementById('filter-date-fin').value;
+    const userId = document.getElementById('filter-user').value;
+    const action = document.getElementById('filter-action').value;
+    
+    if (dateDebut) params.append('date_debut', dateDebut);
+    if (dateFin) params.append('date_fin', dateFin);
+    if (userId) params.append('user_id', userId);
+    if (action) params.append('action', action);
+    
+    window.location.href = '/admin/api/logs/export?' + params.toString();
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// Initialisation
+loadUsers();
+loadLogs(1);
+</script>
+{% endblock %}

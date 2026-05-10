@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collecte des données - Bilan Décennal MTFP</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; }
+        
+        .header {
+            background: linear-gradient(135deg, #006633 0%, #008844 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .header p { font-size: 14px; opacity: 0.9; }
+
+        /* Navigation harmonisée */
+        .top-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .nav {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .nav a, .kpi-dropdown-btn {
+            background: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 10px;
+            color: #006633;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            height: 45px;
+            font-size: 14px;
+        }
+        .nav a:hover, .nav a.active, .kpi-dropdown-btn:hover {
+            background: #006633;
+            color: white;
+        }
+        
+        /* Dropdown Style */
+        .kpi-dropdown { position: relative; }
+        .kpi-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            min-width: 280px;
+            z-index: 9999;
+            overflow: hidden;
+        }
+        .kpi-menu.visible { display: block; }
+        .kpi-menu-header {
+            background: #006633;
+            color: white;
+            padding: 10px 16px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Accordéon */
+        .accordion {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .accordion-header {
+            background: #ffffff;
+            color: #006633;
+            padding: 18px 25px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+        }
+        .accordion-header:hover { background: #f8fcf9; }
+        .accordion-header.actif {
+            background: #006633;
+            color: white;
+        }
+        .accordion-header .icone { transition: transform 0.3s; }
+        .accordion-header.actif .icone { transform: rotate(180deg); }
+        
+        .accordion-content {
+            display: none;
+            background: #f9f9f9;
+        }
+        .accordion-content.actif { display: block; }
+        .accordion-inner { padding: 20px; }
+        
+        /* Formulaire KPI */
+        .kpi-form {
+            border-left: 4px solid #006633;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .kpi-title { font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #333; }
+        .kpi-current { color: #666; margin-bottom: 15px; font-size: 13px; background: #f0f2f5; padding: 8px; border-radius: 5px; }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .direction-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 18px;
+            margin-bottom: 18px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border-left: 4px solid #006633;
+        }
+
+        .direction-panel label {
+            display: block;
+            margin-bottom: 8px;
+            color: #006633;
+            font-weight: 700;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .direction-panel select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d9e3dc;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #fff;
+            color: #183525;
+        }
+        
+        .file-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        .file-input { flex: 1; border: 1px dashed #006633; background: #fff; }
+        
+        .btn-save { background: #006633; width: 100%; margin-top: 10px; font-weight: bold; height: 45px; }
+        button {
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        .btn-pdf { background: #e74c3c; font-size: 13px; }
+        
+        .success { background: #d5f5e3; color: #27ae60; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: none; text-align: center; font-weight: bold; }
+        .error { background: #fdedec; color: #e74c3c; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: none; text-align: center; }
+        
+        .pdf-info {
+            font-size: 12px;
+            margin: 10px 0;
+            padding: 10px;
+            background: #e8f4fd;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .footer { text-align: center; margin-top: 40px; color: #7f8c8d; font-size: 13px; padding-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📝 COLLECTE DES DONNÉES</h1>
+        <p>Bilan Décennal MTFP 2016-2026 | Saisie des performances</p>
+    </div>
+    
+    <div class="top-bar">
+        <div class="nav">
+            <a href="/">📊 Tableau de bord</a>
+            <a href="/collecte" class="active">📝 Collecte des données</a>
+            <a href="/graphique">📈 Graphiques</a>
+            
+            <div class="kpi-dropdown" id="kpi-dropdown">
+                <button class="kpi-dropdown-btn" onclick="basculerMenuKpi(event)">
+                    🎯 Choix du KPI <span style="margin-left:8px; font-size:10px;">▼</span>
+                </button>
+                <div class="kpi-menu" id="kpi-menu">
+                    <div class="kpi-menu-header">Sélectionner un indicateur</div>
+                    </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="successMsg" class="success">✅ Données enregistrées avec succès !</div>
+    <div id="errorMsg" class="error">❌ Erreur lors de l'enregistrement</div>
+
+    <div class="direction-panel">
+        <label for="direction-concernee">Direction concernée</label>
+        <select id="direction-concernee" name="direction" required>
+            <option value="" selected disabled>Sélectionner une direction</option>
+            <option value="Direction générale">Direction générale</option>
+            <option value="Direction des ressources humaines">Direction des ressources humaines</option>
+            <option value="Direction administrative et financière">Direction administrative et financière</option>
+            <option value="Direction des systèmes d'information">Direction des systèmes d'information</option>
+            <option value="Direction technique">Direction technique</option>
+            <option value="Autre direction">Autre direction</option>
+        </select>
+    </div>
+    
+    <div id="contenu"></div>
+    
+    <div class="footer">
+        <p>📁 Référentiel unique : Espace collaboratif SharePoint du MTFP</p>
+        <p>République du Bénin - Ministère du Travail et de la Fonction Publique</p>
+    </div>
+    
+    <script>
+        function basculerMenuKpi(event) {
+            event.stopPropagation();
+            document.getElementById('kpi-menu').classList.toggle('visible');
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.matches('.kpi-dropdown-btn')) {
+                document.getElementById('kpi-menu').classList.remove('visible');
+            }
+        }
+
+        async function chargerDonnees() {
+            try {
+                const [kpisRes, groupesRes] = await Promise.all([
+                    fetch('/api/kpis'),
+                    fetch('/api/groupes')
+                ]);
+                
+                const kpisData = await kpisRes.json();
+                const groupes = await groupesRes.json();
+                
+                let html = '';
+                groupes.forEach((g, index) => {
+                    const kpisGroupe = kpisData.filter(k => k.groupe_id === g.id);
+                    if (kpisGroupe.length === 0) return;
+
+                    html += `
+                        <div class="accordion">
+                            <div class="accordion-header" id="header-${g.id}" onclick="toggleAccordion(${g.id})">
+                                <span>📌 ${g.nom}</span>
+                                <span class="icone">▼</span>
+                            </div>
+                            <div class="accordion-content" id="content-${g.id}">
+                                <div class="accordion-inner">
+                                    ${kpisGroupe.map(k => {
+                                        const pdfInfo = k.fichier_pdf ? 
+                                            `<div class="pdf-info">📎 Document : <a href="/uploads/${k.fichier_pdf}" target="_blank">${k.fichier_pdf}</a></div>` : '';
+                                        
+                                        return `
+                                            <div class="kpi-form">
+                                                <div class="kpi-title">${k.indicateur}</div>
+                                                <div class="kpi-current">Actuel : <b>${k.valeur_atteinte.toLocaleString()}</b> / Cible : ${k.valeur_cible.toLocaleString()} ${k.unite || ''}</div>
+                                                
+                                                <label style="font-size:12px; color:#666;">Nouvelle valeur atteinte :</label>
+                                                <input type="number" id="valeur-${k.id}" step="any" value="${k.valeur_atteinte}">
+                                                
+                                                <label style="font-size:12px; color:#666;">Observations :</label>
+                                                <textarea id="obs-${k.id}" rows="2">${k.observations || ''}</textarea>
+                                                
+                                                <div class="file-section">
+                                                    <input type="file" id="fichier-${k.id}" accept=".pdf" class="file-input">
+                                                    <button onclick="uploadPDF(${k.id})" class="btn-pdf">📎 Joindre PDF</button>
+                                                </div>
+                                                <div id="pdf-info-${k.id}">${pdfInfo}</div>
+                                                
+                                                <button onclick="enregistrer(${k.id})" class="btn-save">💾 Enregistrer l'indicateur</button>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                document.getElementById('contenu').innerHTML = html;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        function toggleAccordion(id) {
+            const content = document.getElementById(`content-${id}`);
+            const header = document.getElementById(`header-${id}`);
+            const isVisible = content.style.display === 'block';
+            
+            // Fermer tout
+            document.querySelectorAll('.accordion-content').forEach(c => c.style.display = 'none');
+            document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('actif'));
+            
+            // Ouvrir si c'était fermé
+            if (!isVisible) {
+                content.style.display = 'block';
+                header.classList.add('actif');
+            }
+        }
+        
+        async function enregistrer(id) {
+            const val = document.getElementById(`valeur-${id}`).value;
+            const obs = document.getElementById(`obs-${id}`).value;
+            const direction = document.getElementById('direction-concernee').value;
+
+            if (!direction) {
+                window.swalError('Direction obligatoire', 'La sélection de la direction est obligatoire avant l’enregistrement.');
+                return;
+            }
+            
+            const res = await fetch(`/api/kpis/update/${id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ valeur_atteinte: parseFloat(val), observations: obs, direction: direction })
+            });
+            
+            if (res.ok) {
+                flashMsg('successMsg');
+                chargerDonnees();
+            } else {
+                flashMsg('errorMsg');
+            }
+        }
+        
+        async function uploadPDF(id) {
+            const input = document.getElementById(`fichier-${id}`);
+            if (!input.files[0]) return window.swalError('Fichier requis', 'Sélectionnez un PDF');
+            
+            const formData = new FormData();
+            formData.append('fichier', input.files[0]);
+            
+            const res = await fetch(`/api/kpis/upload/${id}`, { method: 'POST', body: formData });
+            if (res.ok) {
+                flashMsg('successMsg');
+                chargerDonnees();
+            } else {
+                window.swalError('Erreur', 'Erreur lors de l’envoi du fichier.');
+            }
+        }
+
+        function flashMsg(elementId) {
+            const el = document.getElementById(elementId);
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 3000);
+        }
+        
+        chargerDonnees();
+    </script>
+</body>
+</html>

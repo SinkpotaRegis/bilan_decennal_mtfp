@@ -1,0 +1,495 @@
+{% extends "admin_base.html" %}
+
+{% block titre %}Liste des KPIs — Admin MTFP{% endblock %}
+{% block page_title %}Indicateurs de Performance{% endblock %}
+{% block page_subtitle %}Création, modification et accès aux pages de saisie{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Barre d'actions top ── */
+.kpi-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+}
+
+.kpi-stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 22px;
+}
+.kpi-stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border-left: 4px solid #1a472a;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.kpi-stat-card.orange { border-left-color: #ff8c00; }
+.kpi-stat-card.blue   { border-left-color: #1e88e5; }
+.kpi-stat-card.green  { border-left-color: #2e7d32; }
+.kpi-stat-val  { font-size: 1.8rem; font-weight: 800; color: #1a1a2e; line-height: 1; }
+.kpi-stat-lbl  { font-size: 0.72rem; color: #888; font-weight: 500; }
+
+/* ── Contrôles ── */
+.kpi-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.kpi-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.kpi-search-wrap i {
+    position: absolute;
+    left: 11px;
+    color: #b0bec5;
+    font-size: 12px;
+    pointer-events: none;
+}
+.kpi-search-wrap input {
+    padding: 9px 12px 9px 32px;
+    border: 1.5px solid #dde3ec;
+    border-radius: 9px;
+    font-size: 0.84rem;
+    outline: none;
+    width: 240px;
+    font-family: 'Inter', sans-serif;
+    transition: border-color .2s, box-shadow .2s;
+}
+.kpi-search-wrap input:focus {
+    border-color: #1d6f42;
+    box-shadow: 0 0 0 3px rgba(29,111,66,.1);
+}
+
+.kpi-filtre-groupe {
+    padding: 9px 14px;
+    border: 1.5px solid #dde3ec;
+    border-radius: 9px;
+    font-size: 0.84rem;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    cursor: pointer;
+    background: white;
+    color: #333;
+    transition: border-color .2s;
+}
+.kpi-filtre-groupe:focus { border-color: #1d6f42; }
+
+.btn-nouveau-kpi {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    background: linear-gradient(135deg, #ff8c00, #e67e00);
+    color: white;
+    border: none;
+    border-radius: 9px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    box-shadow: 0 3px 12px rgba(255,140,0,.28);
+    transition: all .22s;
+    white-space: nowrap;
+}
+.btn-nouveau-kpi:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 18px rgba(255,140,0,.38);
+}
+
+/* ── Grille cartes ── */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 14px;
+}
+
+.kpi-card {
+    background: white;
+    border: 1.5px solid #e8edf2;
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    transition: all .22s;
+    position: relative;
+}
+.kpi-card:hover {
+    border-color: #1d6f42;
+    box-shadow: 0 6px 20px rgba(29,111,66,.1);
+    transform: translateY(-2px);
+}
+
+.kpi-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+.kpi-card-code {
+    background: #0d2b1f;
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: .5px;
+}
+.kpi-card-actions {
+    display: flex;
+    gap: 6px;
+    opacity: 0;
+    transition: opacity .2s;
+}
+.kpi-card:hover .kpi-card-actions { opacity: 1; }
+.kpi-act-btn {
+    width: 28px; height: 28px;
+    border: 1.5px solid #e8edf2;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    background: white;
+    font-size: 0.78rem;
+    transition: all .15s;
+}
+.kpi-act-btn:hover        { background: #f0f7f2; border-color: #1d6f42; }
+.kpi-act-btn.del:hover    { background: #ffebee; border-color: #e53935; }
+
+.kpi-card-intitule {
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: #1a2e1a;
+    line-height: 1.4;
+}
+.kpi-card-meta {
+    font-size: 0.74rem;
+    color: #888;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.kpi-meta-tag {
+    background: #f0f4f0;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.kpi-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid #f0f4f0;
+}
+.kpi-prog-wrap { flex: 1; }
+.kpi-prog-bg {
+    background: #e8f5e9;
+    border-radius: 4px;
+    height: 5px;
+    overflow: hidden;
+}
+.kpi-prog-fg {
+    background: linear-gradient(90deg, #1d6f42, #2e7d32);
+    height: 100%;
+    border-radius: 4px;
+    transition: width .5s ease;
+}
+.kpi-prog-lbl { font-size: 0.68rem; color: #888; margin-top: 3px; }
+
+.badge-complet {
+    background: #e8f5e9;
+    color: #2e7d32;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.btn-ouvrir {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    background: linear-gradient(135deg, #1d6f42, #2e7d32);
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: all .2s;
+}
+.btn-ouvrir:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(29,111,66,.3);
+    color: white;
+}
+
+/* ── Vide / Chargement ── */
+.kpi-loading, .kpi-vide {
+    text-align: center;
+    padding: 50px 20px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.kpi-vide {
+    border: 2px dashed #dde3ec;
+}
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<!-- ── Stats rapides ── -->
+<div class="kpi-stats-row">
+    <div class="kpi-stat-card">
+        <div class="kpi-stat-val" id="stat-total">—</div>
+        <div class="kpi-stat-lbl">KPIs total</div>
+    </div>
+    <div class="kpi-stat-card orange">
+        <div class="kpi-stat-val" id="stat-incomplets">—</div>
+        <div class="kpi-stat-lbl">Incomplets</div>
+    </div>
+    <div class="kpi-stat-card green">
+        <div class="kpi-stat-val" id="stat-complets">—</div>
+        <div class="kpi-stat-lbl">Complets (11/11)</div>
+    </div>
+    <div class="kpi-stat-card blue">
+        <div class="kpi-stat-val" id="stat-pct">—</div>
+        <div class="kpi-stat-lbl">% de complétion</div>
+    </div>
+</div>
+
+<!-- ── Barre d'actions ── -->
+<div class="kpi-topbar">
+    <div class="kpi-controls">
+        <!-- Recherche -->
+        <div class="kpi-search-wrap">
+            <i class="fas fa-search"></i>
+            <input type="text" id="kpiSearch"
+                   placeholder="Rechercher par code ou intitulé…"
+                   oninput="filtrer()">
+        </div>
+        <!-- Filtre groupe -->
+        <select class="kpi-filtre-groupe" id="kpiFiltre" onchange="filtrer()">
+            <option value="">Tous les groupes</option>
+            <option value="Gouvernance">GT1 — Gouvernance</option>
+            <option value="Travail">GT2 — Travail</option>
+            <option value="Fonction">GT3 — Fonction Publique</option>
+        </select>
+    </div>
+    <!-- Bouton créer -->
+    <button class="btn-nouveau-kpi" onclick="ouvrirModalKpi()">
+        <i class="fas fa-plus-circle"></i>
+        Nouveau KPI
+    </button>
+</div>
+
+<!-- ── Zone de chargement ── -->
+<div class="kpi-loading" id="kpiLoading">
+    <i class="fas fa-spinner fa-spin"
+       style="font-size:1.6rem;color:#1d6f42;margin-bottom:12px;display:block"></i>
+    Chargement des indicateurs…
+</div>
+
+<!-- ── Grille ── -->
+<div class="kpi-grid" id="kpiGrid" style="display:none"></div>
+
+<!-- ── Vide ── -->
+<div class="kpi-vide" id="kpiVide" style="display:none">
+    <div style="font-size:2.5rem;margin-bottom:12px">📊</div>
+    <div style="font-weight:700;color:#1a2e1a;margin-bottom:6px;font-size:1rem">
+        Aucun KPI trouvé
+    </div>
+    <div style="font-size:0.82rem;color:#888;margin-bottom:20px">
+        Crée ton premier indicateur avec le bouton ci-dessous
+    </div>
+    <button class="btn-nouveau-kpi" onclick="ouvrirModalKpi()">
+        <i class="fas fa-plus-circle"></i> Créer le premier KPI
+    </button>
+</div>
+
+<!-- ── Modal création/édition ── -->
+<!-- SweetAlert2 doit être chargé AVANT le modal qui l'utilise -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+{% include 'admin/modal_nouveau_kpi.html' %}
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+var tousKpis = [];
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded', chargerKpis);
+
+/* ── Chargement depuis l'API ── */
+async function chargerKpis() {
+    document.getElementById('kpiLoading').style.display = 'block';
+    document.getElementById('kpiGrid').style.display    = 'none';
+    document.getElementById('kpiVide').style.display    = 'none';
+
+    try {
+        var res  = await fetch('/admin/api/kpis/liste');
+        var data = await res.json();
+        tousKpis = data.kpis || [];
+
+        /* Stats */
+        var complets = tousKpis.filter(function(k){ return k.complet; }).length;
+        var incomplets = tousKpis.length - complets;
+        var pct = tousKpis.length > 0
+            ? Math.round(complets / tousKpis.length * 100) : 0;
+
+        document.getElementById('stat-total').textContent     = tousKpis.length;
+        document.getElementById('stat-incomplets').textContent = incomplets;
+        document.getElementById('stat-complets').textContent  = complets;
+        document.getElementById('stat-pct').textContent       = pct + '%';
+
+        afficherKpis(tousKpis);
+    } catch(e) {
+        document.getElementById('kpiLoading').innerHTML =
+            '<i class="fas fa-exclamation-triangle" style="color:#e53935;font-size:1.4rem;display:block;margin-bottom:10px"></i>'
+            + 'Erreur de chargement : ' + e.message;
+    }
+}
+
+/* ── Affichage des cartes ── */
+function afficherKpis(liste) {
+    console.log("Liste récup", liste)
+    document.getElementById('kpiLoading').style.display = 'none';
+    var grid = document.getElementById('kpiGrid');
+    var vide = document.getElementById('kpiVide');
+
+    if (!liste || liste.length === 0) {
+        grid.style.display = 'none';
+        vide.style.display = 'block';
+        return;
+    }
+
+    vide.style.display = 'none';
+    grid.style.display = 'grid';
+    grid.innerHTML = '';
+
+    liste.forEach(function(k) {
+        var pct  = Math.round(k.nb_renseigne / 11 * 100);
+        var card = document.createElement('div');
+
+        card.className   = 'kpi-card';
+        card.dataset.id  = k.id;
+        card.innerHTML =
+            '<div class="kpi-card-top">' +
+                '<span class="kpi-card-code">' + k.code + '</span>' +
+                '<div class="kpi-card-actions">' +
+                    '<button class="kpi-act-btn" onclick="ouvrirEditionKpi(' + k.id + ')" title="Modifier">' +
+                        '<i class="fas fa-pen"></i>' +
+                    '</button>' +
+                    '<button class="kpi-act-btn del" onclick="supprimerKpi(' + k.id + ',\'' + k.code + '\')" title="Supprimer">' +
+                        '<i class="fas fa-trash-alt"></i>' +
+                    '</button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="kpi-card-intitule">' + k.indicateur + '</div>' +
+            '<div class="kpi-card-meta">' +
+                '<span class="kpi-meta-tag">' + k.groupe + '</span>' +
+                '<span class="kpi-meta-tag">' + k.formule + '</span>' +
+                '<span class="kpi-meta-tag">' + k.unite + '</span>' +
+            '</div>' +
+            '<div class="kpi-card-footer">' +
+                '<div class="kpi-prog-wrap">' +
+                    '<div class="kpi-prog-bg">' +
+                        '<div class="kpi-prog-fg" style="width:' + pct + '%"></div>' +
+                    '</div>' +
+                    '<div class="kpi-prog-lbl">' + k.nb_renseigne + '/11 années renseignées</div>' +
+                '</div>' +
+                (k.complet ? '<span class="badge-complet">✅ Complet</span>' : '') +
+                '<a href="' + k.url + '" class="btn-ouvrir">' +
+                    '<i class="fas fa-external-link-alt"></i> Ouvrir' +
+                '</a>' +
+            '</div>';
+        grid.appendChild(card);
+    });
+}
+
+/* ── Filtre recherche + groupe ── */
+function filtrer() {
+    var txt     = document.getElementById('kpiSearch').value.toLowerCase().trim();
+    var groupe  = document.getElementById('kpiFiltre').value.toLowerCase();
+    var liste   = tousKpis.filter(function(k) {
+        var okTxt   = !txt    || k.code.toLowerCase().includes(txt) || k.indicateur.toLowerCase().includes(txt);
+        var okGrp   = !groupe || k.groupe.toLowerCase().includes(groupe);
+        return okTxt && okGrp;
+    });
+    afficherKpis(liste);
+}
+
+/* ── Supprimer ── */
+async function supprimerKpi(id, code) {
+    var result = await Swal.fire({
+        icon: 'warning',
+        title: 'Supprimer ' + code + ' ?',
+        text: 'Toutes les données annuelles de cet indicateur seront supprimées. Cette action est irréversible.',
+        showCancelButton: true,
+        confirmButtonText: 'Oui, supprimer',
+        cancelButtonText: 'Annuler',
+        confirmButtonColor: '#e53935',
+        cancelButtonColor: '#6c757d',
+        reverseButtons: true,
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+        var res  = await fetch('/admin/api/kpis/' + id, { method: 'DELETE' });
+        var data = await res.json();
+        if (data.status === 'success') {
+            Swal.fire({ icon:'success', title:'Supprimé', text: code + ' a été supprimé.', timer:2000, showConfirmButton:false });
+            chargerKpis();
+        } else {
+            Swal.fire({ icon:'error', title:'Erreur', text: data.error || 'Impossible de supprimer.' });
+        }
+    } catch(e) {
+        Swal.fire({ icon:'error', title:'Erreur', text: e.message });
+    }
+}
+
+/* chargerListeKpis est un alias pour le modal (appelé après création) */
+function chargerListeKpis() { chargerKpis(); }
+
+/* Surcharger swalSuccess/swalError pour SweetAlert2 */
+window.swalSuccess = function(t, txt) {
+    return Swal.fire({ icon:'success', title:t, text:txt, timer:2500, showConfirmButton:false });
+};
+window.swalError = function(t, txt) {
+    return Swal.fire({ icon:'error', title:t, text:txt });
+};
+window.swalConfirm = function(opts) {
+    return Swal.fire({
+        icon:'warning', title:opts.title, text:opts.text,
+        showCancelButton:true,
+        confirmButtonText: opts.confirmButtonText || 'Confirmer',
+        cancelButtonText:  opts.cancelButtonText  || 'Annuler',
+        confirmButtonColor:'#1f5b3a', cancelButtonColor:'#6c757d',
+        reverseButtons:true,
+    });
+};
+</script>
+{% endblock %}

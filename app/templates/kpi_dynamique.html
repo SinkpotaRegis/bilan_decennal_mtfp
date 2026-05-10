@@ -1,0 +1,853 @@
+{% extends "base.html" %}
+{% block titre %}{{ kpi.code }} — {{ kpi.indicateur }}{% endblock %}
+{% set page_active = 'kpi' %}
+
+{% block extra_css %}
+<style>
+/* ── Header ── */
+.kpi-header {
+    background: linear-gradient(135deg, #006633 0%, #008844 100%);
+    color: white; padding: 20px 25px; border-radius: 10px;
+    margin-bottom: 20px; display: flex; justify-content: space-between;
+    align-items: center; flex-wrap: wrap; gap: 10px;
+}
+.kpi-header h1 { font-size: 1.2rem; font-weight: 700; margin: 0; }
+.kpi-header p  { font-size: 0.85rem; opacity: 0.9; margin: 4px 0 0; }
+.badge-code {
+    background: rgba(255,255,255,0.2); padding: 6px 16px;
+    border-radius: 20px; font-weight: bold; font-size: 1rem;
+    letter-spacing: 1px; white-space: nowrap;
+}
+
+/* ── Direction auto-sélectionnée ── */
+.direction-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 8px; padding: 6px 14px; font-size: 0.82rem;
+    font-weight: 600; margin-top: 8px; color: white;
+}
+.direction-badge i { font-size: 0.78rem; opacity: 0.8; }
+
+/* ── Fiche info ── */
+.fiche-kpi {
+    background: white; border-radius: 10px; padding: 20px;
+    margin-bottom: 20px; border-left: 5px solid #006633;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.fiche-kpi h2 { color: #006633; font-size: 1rem; margin: 0 0 14px; }
+.fiche-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px; font-size: 0.85rem;
+}
+.fiche-item { display: flex; flex-direction: column; gap: 3px; }
+.fiche-item label { color: #888; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; }
+.fiche-item span  { color: #333; font-weight: 500; }
+.formule-box {
+    background: #f8fdf9; border: 1px dashed #006633;
+    border-radius: 8px; padding: 12px 16px;
+    margin-top: 14px; font-size: 0.85rem; color: #006633; text-align: center;
+}
+
+/* ── Tableau de saisie ── */
+.saisie-section {
+    background: white; border-radius: 10px; padding: 25px;
+    margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.saisie-section h2 {
+    color: #006633; font-size: 1.05rem; margin: 0 0 20px;
+    padding-bottom: 10px; border-bottom: 2px solid #e8f5e9;
+    display: flex; align-items: center; gap: 8px;
+}
+.table-wrapper { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+thead th {
+    background: #006633; color: white; padding: 10px 14px;
+    text-align: left; font-weight: 600; white-space: nowrap;
+}
+tbody td { padding: 9px 12px; border-bottom: 1px solid #e8f5e9; color: #333; vertical-align: middle; }
+tbody tr:nth-child(even) td { background: #f8fdf9; }
+tbody tr:hover td { background: #e8f5e9; transition: background 0.15s; }
+tfoot td { background: #e8f5e9; font-weight: 700; color: #006633; border-top: 2px solid #006633; padding: 10px 12px; }
+
+/* Inputs dans le tableau */
+.inp-num, .inp-den, .inp-com {
+    width: 100%; padding: 7px 10px; border: 1.5px solid #ddd;
+    border-radius: 6px; font-size: 0.85rem; outline: none;
+    transition: border-color 0.2s; background: white;
+}
+.inp-num:focus, .inp-den:focus, .inp-com:focus {
+    border-color: #006633; box-shadow: 0 0 0 3px rgba(0,102,51,0.1);
+}
+.inp-com { min-width: 160px; }
+.cell-valeur { font-weight: 700; color: #006633; min-width: 90px; }
+.cell-statut { min-width: 110px; }
+
+/* ── Colonne PREUVES DOCUMENTAIRES ── */
+.cell-preuves { min-width: 180px; }
+
+.btn-preuve {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 11px; background: #f0f7f2; color: #006633;
+    border: 1.5px solid #a5d6a7; border-radius: 6px; font-size: 0.75rem;
+    font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.btn-preuve:hover { background: #e8f5e9; border-color: #006633; }
+.btn-preuve i { font-size: 0.78rem; }
+
+.preuves-list {
+    margin-top: 6px; display: flex; flex-direction: column; gap: 3px;
+}
+.preuve-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.72rem; color: #555; background: #f8fafc;
+    border: 1px solid #e8edf2; border-radius: 5px; padding: 3px 8px;
+}
+.preuve-item .preuve-nom {
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;
+}
+.preuve-item .preuve-type {
+    background: #e8f5e9; color: #2e7d32; padding: 1px 5px;
+    border-radius: 3px; font-weight: 600; font-size: 0.65rem; text-transform: uppercase;
+}
+.preuve-item .preuve-del {
+    cursor: pointer; color: #e53935; font-size: 0.7rem;
+    opacity: 0.6; transition: opacity 0.15s; flex-shrink: 0;
+}
+.preuve-item .preuve-del:hover { opacity: 1; }
+
+.preuve-upload-progress {
+    width: 100%; height: 3px; background: #e8f5e9;
+    border-radius: 3px; margin-top: 4px; overflow: hidden; display: none;
+}
+.preuve-upload-bar {
+    height: 100%; background: #006633; border-radius: 3px;
+    transition: width 0.3s ease; width: 0%;
+}
+
+/* Badges statut */
+.badge-statut {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+}
+.badge-valide   { background: #e8f5e9; color: #2e7d32; }
+.badge-attente  { background: #fff8e1; color: #f57f17; }
+.badge-relance  { background: #fff3e0; color: #e65100; }
+.badge-annule   { background: #ffebee; color: #c62828; }
+.badge-vide     { background: #f5f5f5; color: #9e9e9e; }
+
+/* Actions ligne */
+.btn-save-row {
+    padding: 5px 12px; background: #006633; color: white;
+    border: none; border-radius: 6px; font-size: 0.78rem;
+    font-weight: 600; cursor: pointer; transition: background 0.2s;
+    display: flex; align-items: center; gap: 5px; white-space: nowrap;
+}
+.btn-save-row:hover { background: #004d26; }
+.btn-save-row:disabled { opacity: 0.6; cursor: not-allowed; }
+.spinner-sm {
+    width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white; border-radius: 50%;
+    animation: spin 0.8s linear infinite; display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Bouton global */
+.btn-soumettre-tout {
+    background: linear-gradient(135deg, #006633, #008844);
+    color: white; border: none; padding: 12px 28px;
+    border-radius: 8px; font-size: 0.95rem; font-weight: 700;
+    cursor: pointer; display: inline-flex; align-items: center;
+    gap: 10px; transition: all 0.2s; margin-top: 16px;
+}
+.btn-soumettre-tout:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(0,102,51,0.3); }
+.btn-soumettre-tout:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* Toast */
+.notif-toast {
+    position: fixed; bottom: 24px; right: 24px;
+    padding: 14px 20px; border-radius: 10px; font-size: 0.88rem;
+    font-weight: 600; z-index: 9999; display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    opacity: 0; transform: translateY(20px);
+    transition: all 0.35s; pointer-events: none;
+}
+.notif-toast.show { opacity: 1; transform: translateY(0); }
+.notif-toast.success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+.notif-toast.error   { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+.notif-toast.info    { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+
+/* Progression */
+.progress-bar-wrap {
+    background: #e8f5e9; border-radius: 4px; height: 6px;
+    margin-top: 8px; overflow: hidden;
+}
+.progress-bar-fill {
+    background: #006633; height: 100%; border-radius: 4px; transition: width 0.4s ease;
+}
+.progress-label { font-size: 0.75rem; color: #666; margin-top: 4px; }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="notif-toast" id="notifToast"></div>
+
+<!-- ── Header avec direction auto-sélectionnée ── -->
+<div class="kpi-header">
+    <div>
+        <h1>📊 {{ kpi.indicateur }}</h1>
+        <p>
+            {{ groupe_nom }} ·
+            <strong>{{ kpi.unite or '' }}</strong> ·
+            Fréquence : {{ kpi.frequence_collecte or 'Annuelle' }}
+        </p>
+        <!-- Direction auto-sélectionnée et verrouillée -->
+        <div class="direction-badge">
+            <i class="fas fa-building"></i>
+            Direction : <strong>{{ direction_code }}</strong> — {{ direction_label }}
+            <i class="fas fa-lock" style="font-size:0.65rem;opacity:0.7" title="Direction fixée automatiquement"></i>
+        </div>
+    </div>
+    <div class="badge-code">{{ kpi.code }}</div>
+</div>
+
+<!-- ── Fiche indicateur ── -->
+<div class="fiche-kpi">
+    <h2>ℹ️ Fiche de l'indicateur</h2>
+    <div class="fiche-grid">
+        <div class="fiche-item">
+            <label>Définition</label>
+            <span>{{ kpi.definition or '—' }}</span>
+        </div>
+        <div class="fiche-item">
+            <label>Objectif / Utilité</label>
+            <span>{{ kpi.objectif or '—' }}</span>
+        </div>
+        <div class="fiche-item">
+            <label>Unité de mesure</label>
+            <span>{{ kpi.unite or '—' }}</span>
+        </div>
+        <div class="fiche-item">
+            <label>Sources de vérification</label>
+            <span>{{ kpi.source_verification or '—' }}</span>
+        </div>
+        <div class="fiche-item">
+            <label>Valeur cible 2026</label>
+            <span>{{ kpi.valeur_cible or '—' }} {{ kpi.unite or '' }}</span>
+        </div>
+        <div class="fiche-item">
+            <label>Direction concernée</label>
+            <span><strong>{{ direction_code }}</strong> — {{ direction_label }}</span>
+        </div>
+    </div>
+    {% if kpi.formule_type and kpi.numerateur_label %}
+    <div class="formule-box">
+        <strong>Mode de calcul :</strong>
+        {% if kpi.formule_type == 'pourcentage' %}
+            ({{ kpi.numerateur_label }} ÷ {{ kpi.denominateur_label }}) × 100
+        {% elif kpi.formule_type == 'moyenne' %}
+            {{ kpi.numerateur_label }} ÷ {{ kpi.denominateur_label }}
+        {% elif kpi.formule_type in ['somme', 'cumul_annuel', 'nombre'] %}
+            Σ {{ kpi.numerateur_label }}
+        {% else %}
+            {{ kpi.numerateur_label }}
+            {% if kpi.denominateur_label %} ÷ {{ kpi.denominateur_label }}{% endif %}
+        {% endif %}
+        → Résultat en <strong>{{ kpi.unite or 'valeur' }}</strong>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ── Section saisie annuelle ── -->
+<div class="saisie-section">
+    <h2>✏️ Saisie des données annuelles (2016 – 2026)</h2>
+
+    <div id="progressWrap" style="margin-bottom:18px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:0.82rem;font-weight:600;color:#555">Avancement de la saisie</span>
+            <span class="progress-label" id="progressLabel">0 / 11 années renseignées</span>
+        </div>
+        <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table id="table-main">
+            <thead>
+                <tr>
+                    <th>Année</th>
+                    <th>{{ kpi.numerateur_label or 'Numérateur' }}</th>
+                    {% if kpi.formule_type not in ['somme', 'cumul_annuel', 'nombre', 'score_externe', 'indice'] %}
+                    <th>{{ kpi.denominateur_label or 'Dénominateur' }}</th>
+                    {% endif %}
+                    <th>{{ kpi.get_resultat_label() }} ({{ kpi.get_resultat_unite() }})</th>
+                    <th>Observation</th>
+                    <th>📎 Preuves documentaires</th>
+                    <th>Statut</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-main"></tbody>
+            <tfoot id="tfoot-main"></tfoot>
+        </table>
+    </div>
+
+    <button class="btn-soumettre-tout" id="btnSoumettreT" onclick="soumettreToutes()">
+        <span id="iconST">✅</span>
+        <span id="textST">Enregistrer toutes les années</span>
+    </button>
+</div>
+
+<!-- ── Historique ── -->
+<div class="saisie-section" id="section-historique" style="display:none">
+    <h2>📈 Données déjà enregistrées en base</h2>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Année</th>
+                    <th>Valeur calculée</th>
+                    <th>Unité</th>
+                    <th>Commentaire</th>
+                    <th>Preuves</th>
+                    <th>Statut validation</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-historique"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Input file caché (réutilisé pour toutes les lignes) -->
+<input type="file" id="fileInputGlobal" multiple
+       accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.zip,.csv,.txt"
+       style="display:none" onchange="gererFichiersSelectionnes(event)">
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+/* ============================================================
+   CONFIG
+============================================================ */
+const KPI_ID       = {{ kpi.id }};
+const KPI_CODE     = "{{ kpi.code }}";
+const DIRECTION    = "{{ direction_code }}";  /* ← Direction auto du KPI */
+const FORMULE_TYPE = "{{ kpi.formule_type or 'pourcentage' }}";
+const AVEC_DENOM   = !['somme','cumul_annuel','nombre','score_externe','indice'].includes(FORMULE_TYPE);
+const ANNEES       = [2016,2017,2018,2019,2020,2021,2022,2023,2024,2025,2026];
+const UNITE        = "{{ kpi.get_resultat_unite() }}";
+const MAX_SIZE_MB  = 50;
+const DONNEES_BDD  = {{ donnees_bdd | tojson }};
+
+/* Stockage local des fichiers en attente d'upload par année */
+const fichiersEnAttente = {}; /* { annee: [{file, nom, type, taille}, ...] } */
+const fichiersDejaSauves = {}; /* { annee: [{nom, type, url}, ...] } */
+
+/* Année en cours de sélection de fichiers */
+let anneeSelectCourante = null;
+
+/* ============================================================
+   INIT
+============================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+    /* ── Auto-sélection de la direction dans le select base.html ── */
+    const selectDir = document.getElementById('direction-concernee');
+    if (selectDir) {
+        if (DIRECTION) {
+            /* Trouver et sélectionner la bonne option */
+            let found = false;
+            for (let i = 0; i < selectDir.options.length; i++) {
+                if (selectDir.options[i].value === DIRECTION) {
+                    selectDir.selectedIndex = i;
+                    found = true;
+                    break;
+                }
+            }
+            if (found) {
+                /* Verrouiller les autres options */
+                for (let i = 0; i < selectDir.options.length; i++) {
+                    if (selectDir.options[i].value !== DIRECTION && selectDir.options[i].value !== '') {
+                        selectDir.options[i].disabled = true;
+                        selectDir.options[i].style.color = '#ccc';
+                    }
+                }
+                selectDir.style.background    = '#f0f7f2';
+                selectDir.style.borderColor   = '#006633';
+                selectDir.style.fontWeight    = '700';
+                selectDir.style.color         = '#0d3b22';
+                selectDir.style.pointerEvents = 'none';
+                const hint = document.getElementById('direction-hint');
+                if (hint) {
+                    hint.style.display = 'block';
+                    hint.innerHTML = `✅ Direction <strong>${DIRECTION}</strong> fixée automatiquement pour ce KPI.`;
+                }
+            }
+        }
+        /* Si direction inconnue ou vide → laisser le select libre */
+    }
+
+    construireTableau();
+    chargerHistorique();
+});
+
+/* ============================================================
+   CONSTRUCTION DU TABLEAU
+============================================================ */
+function construireTableau() {
+    const tbody = document.getElementById('tbody-main');
+    tbody.innerHTML = '';
+
+    ANNEES.forEach(annee => {
+        const bdd    = DONNEES_BDD[annee] || {};
+        const num    = bdd.numerateur   !== undefined ? bdd.numerateur   : '';
+        const den    = bdd.denominateur !== undefined ? bdd.denominateur : '';
+        const com    = bdd.commentaire  || '';
+        const val    = bdd.valeur !== undefined && bdd.valeur !== null
+                       ? Number(bdd.valeur).toFixed(2) : '';
+        const statut = bdd.statut || 'vide';
+
+        fichiersEnAttente[annee]   = [];
+        fichiersDejaSauves[annee]  = bdd.preuves || [];
+
+        const tr = document.createElement('tr');
+        tr.id = `row-${annee}`;
+        tr.innerHTML = `
+            <td><strong>${annee}</strong></td>
+            <td>
+                <input class="inp-num" id="inp-num-${KPI_ID}-${annee}"
+                    type="number" step="any" placeholder="0"
+                    value="${num}" oninput="calculerLigne(${annee})">
+            </td>
+            ${AVEC_DENOM ? `
+            <td>
+                <input class="inp-den" id="inp-den-${KPI_ID}-${annee}"
+                    type="number" step="any" min="0" placeholder="0"
+                    value="${den}" oninput="calculerLigne(${annee})">
+            </td>` : ''}
+            <td class="cell-valeur" id="val-${annee}">
+                ${val
+                    ? `<strong>${val}</strong> <span style="color:#888;font-size:.78rem">${UNITE}</span>`
+                    : '<span style="color:#ccc">—</span>'}
+            </td>
+            <td>
+                <input class="inp-com" id="com-${KPI_ID}-${annee}"
+                    type="text" placeholder="Observation (optionnel)"
+                    value="${com.replace(/"/g, '&quot;')}">
+            </td>
+            <td class="cell-preuves" id="preuves-cell-${annee}">
+                <button class="btn-preuve" onclick="ouvrirSelectFichiers(${annee})">
+                    <i class="fas fa-paperclip"></i> Joindre
+                </button>
+                <div class="preuves-list" id="preuves-list-${annee}"></div>
+                <div class="preuve-upload-progress" id="prog-${annee}">
+                    <div class="preuve-upload-bar" id="prog-bar-${annee}"></div>
+                </div>
+            </td>
+            <td class="cell-statut" id="statut-${annee}">${badgeStatut(statut)}</td>
+            <td>
+                <button class="btn-save-row" id="btn-${annee}" onclick="enregistrerLigne(${annee})">
+                    <div class="spinner-sm" id="spin-${annee}"></div>
+                    <span id="btntxt-${annee}">💾 Sauver</span>
+                </button>
+            </td>`;
+        tbody.appendChild(tr);
+
+        /* Afficher les preuves déjà sauvées */
+        rendreFichiersListe(annee);
+    });
+
+    majProgression();
+    construirePied();
+}
+
+/* ============================================================
+   GESTION DES FICHIERS PREUVES
+============================================================ */
+function ouvrirSelectFichiers(annee) {
+    anneeSelectCourante = annee;
+    const fi = document.getElementById('fileInputGlobal');
+    fi.value = '';
+    fi.click();
+}
+
+function gererFichiersSelectionnes(event) {
+    const annee  = anneeSelectCourante;
+    const files  = Array.from(event.target.files);
+    const MAX_B  = MAX_SIZE_MB * 1024 * 1024;
+    const EXTS_OK = ['pdf','doc','docx','xls','xlsx','ppt','pptx',
+                     'jpg','jpeg','png','gif','mp4','zip','csv','txt'];
+    let erreurs = [];
+
+    files.forEach(file => {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!EXTS_OK.includes(ext)) {
+            erreurs.push(`${file.name} : type non autorisé`);
+            return;
+        }
+        if (file.size > MAX_B) {
+            erreurs.push(`${file.name} : dépasse ${MAX_SIZE_MB} Mo`);
+            return;
+        }
+        /* Éviter les doublons par nom */
+        const dejaDans = fichiersEnAttente[annee].some(f => f.file.name === file.name);
+        if (!dejaDans) {
+            fichiersEnAttente[annee].push({
+                file:   file,
+                nom:    file.name,
+                type:   ext.toUpperCase(),
+                taille: (file.size / 1024 / 1024).toFixed(2) + ' Mo',
+            });
+        }
+    });
+
+    if (erreurs.length) {
+        toast('⚠️ ' + erreurs.join(' · '), 'error');
+    }
+
+    rendreFichiersListe(annee);
+}
+
+function rendreFichiersListe(annee) {
+    const list = document.getElementById(`preuves-list-${annee}`);
+    if (!list) return;
+    list.innerHTML = '';
+
+    /* Preuves déjà sauvées en BDD */
+    (fichiersDejaSauves[annee] || []).forEach((p, i) => {
+        const item = document.createElement('div');
+        item.className = 'preuve-item';
+        item.innerHTML = `
+            <span class="preuve-type">${p.type || 'FILE'}</span>
+            <span class="preuve-nom" title="${p.nom}">${p.nom}</span>
+            <a href="${p.url || '#'}" target="_blank" style="color:#006633;font-size:.7rem" title="Télécharger">⬇</a>
+            <span class="preuve-del" onclick="supprimerPreuveSauvee(${annee}, ${i})" title="Supprimer">✕</span>`;
+        list.appendChild(item);
+    });
+
+    /* Preuves en attente d'upload */
+    (fichiersEnAttente[annee] || []).forEach((p, i) => {
+        const item = document.createElement('div');
+        item.className = 'preuve-item';
+        item.style.borderColor = '#ffe082';
+        item.innerHTML = `
+            <span class="preuve-type" style="background:#fff8e1;color:#f57f17">${p.type}</span>
+            <span class="preuve-nom" title="${p.nom}">${p.nom}</span>
+            <span style="color:#888;font-size:.65rem">${p.taille}</span>
+            <span class="preuve-del" onclick="retirerFichierAttente(${annee}, ${i})" title="Retirer">✕</span>`;
+        list.appendChild(item);
+    });
+
+    /* Compteur */
+    const total = (fichiersDejaSauves[annee] || []).length + (fichiersEnAttente[annee] || []).length;
+    const btn   = document.querySelector(`#preuves-cell-${annee} .btn-preuve`);
+    if (btn) {
+        btn.innerHTML = `<i class="fas fa-paperclip"></i> ${total > 0 ? `Joindre (${total})` : 'Joindre'}`;
+    }
+}
+
+function retirerFichierAttente(annee, idx) {
+    fichiersEnAttente[annee].splice(idx, 1);
+    rendreFichiersListe(annee);
+}
+
+async function supprimerPreuveSauvee(annee, idx) {
+    const p = (fichiersDejaSauves[annee] || [])[idx];
+    if (!p) return;
+    if (!confirm(`Supprimer "${p.nom}" ?`)) return;
+    try {
+        const res  = await fetch(`/api/preuves/${p.id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.status === 'success') {
+            fichiersDejaSauves[annee].splice(idx, 1);
+            rendreFichiersListe(annee);
+            toast('Preuve supprimée.', 'info');
+        }
+    } catch(e) { toast('Erreur suppression : ' + e.message, 'error'); }
+}
+
+async function uploaderFichiersAnnee(annee, kpiAnnuelId) {
+    const fichiers = fichiersEnAttente[annee] || [];
+    if (fichiers.length === 0) return;
+
+    const prog    = document.getElementById(`prog-${annee}`);
+    const progBar = document.getElementById(`prog-bar-${annee}`);
+    prog.style.display = 'block';
+
+    let done = 0;
+    for (const p of fichiers) {
+        const fd = new FormData();
+        fd.append('fichier',         p.file);
+        fd.append('kpi_id',          KPI_ID);
+        fd.append('kpi_annuel_id',   kpiAnnuelId);
+        fd.append('annee',           annee);
+        fd.append('direction',       DIRECTION);
+
+        try {
+            const res  = await fetch('/api/preuves/upload', { method: 'POST', body: fd });
+            const data = await res.json();
+            if (data.status === 'success') {
+                fichiersDejaSauves[annee].push({
+                    id:   data.id,
+                    nom:  p.nom,
+                    type: p.type,
+                    url:  data.url,
+                });
+            } else {
+                toast(`❌ Upload "${p.nom}" : ${data.error}`, 'error');
+            }
+        } catch(e) {
+            toast(`❌ Upload "${p.nom}" : ${e.message}`, 'error');
+        }
+        done++;
+        progBar.style.width = Math.round(done / fichiers.length * 100) + '%';
+    }
+
+    fichiersEnAttente[annee] = [];
+    rendreFichiersListe(annee);
+    setTimeout(() => { prog.style.display = 'none'; progBar.style.width = '0%'; }, 800);
+}
+
+/* ============================================================
+   CALCUL CÔTÉ CLIENT
+============================================================ */
+function calculerLigne(annee) {
+    const numEl = document.getElementById(`inp-num-${KPI_ID}-${annee}`);
+    const denEl = document.getElementById(`inp-den-${KPI_ID}-${annee}`);
+    const valEl = document.getElementById(`val-${annee}`);
+    if (!numEl) return;
+
+    const num = parseFloat(numEl.value);
+    const den = denEl ? parseFloat(denEl.value) : null;
+    let res   = null;
+
+    if (!isNaN(num)) {
+        if (!AVEC_DENOM) {
+            res = num;
+        } else if (den !== null && !isNaN(den) && den > 0) {
+            res = FORMULE_TYPE === 'pourcentage' ? (num / den) * 100 : num / den;
+        }
+    }
+
+    valEl.innerHTML = res !== null
+        ? `<strong>${res.toFixed(2)}</strong> <span style="color:#888;font-size:.78rem">${UNITE}</span>`
+        : '<span style="color:#ccc">—</span>';
+}
+
+/* ============================================================
+   BADGE STATUT
+============================================================ */
+function badgeStatut(s) {
+    const map = {
+        valide:     ['badge-valide',  '✅ Validé'],
+        en_attente: ['badge-attente', '⏳ En attente'],
+        relance:    ['badge-relance', '🔁 Relancé'],
+        annule:     ['badge-annule',  '❌ Annulé'],
+        vide:       ['badge-vide',    '○ Non saisi'],
+    };
+    const [cls, label] = map[s] || map.vide;
+    return `<span class="badge-statut ${cls}">${label}</span>`;
+}
+
+/* ============================================================
+   PIED DE TABLEAU
+============================================================ */
+function construirePied() {
+    const tfoot = document.getElementById('tfoot-main');
+    const cols  = AVEC_DENOM ? 5 : 4;
+    tfoot.innerHTML = `
+        <tr>
+            <td colspan="${cols}"><strong>Moyenne / Total global</strong></td>
+            <td class="cell-valeur" id="pied-val">—</td>
+            <td colspan="3"></td>
+        </tr>`;
+}
+
+/* ============================================================
+   PROGRESSION
+============================================================ */
+function majProgression() {
+    let renseignes = 0;
+    ANNEES.forEach(a => {
+        const num = document.getElementById(`inp-num-${KPI_ID}-${a}`);
+        if (num && num.value.trim() !== '' && num.value !== '0') renseignes++;
+    });
+    const pct = Math.round(renseignes / ANNEES.length * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent =
+        `${renseignes} / ${ANNEES.length} années renseignées`;
+}
+
+/* ============================================================
+   ENREGISTREMENT D'UNE LIGNE + UPLOAD PREUVES
+============================================================ */
+async function enregistrerLigne(annee) {
+    const numEl  = document.getElementById(`inp-num-${KPI_ID}-${annee}`);
+    const denEl  = document.getElementById(`inp-den-${KPI_ID}-${annee}`);
+    const comEl  = document.getElementById(`com-${KPI_ID}-${annee}`);
+    const btn    = document.getElementById(`btn-${annee}`);
+    const spin   = document.getElementById(`spin-${annee}`);
+    const btntxt = document.getElementById(`btntxt-${annee}`);
+
+    if (!numEl || numEl.value.trim() === '') {
+        toast('Renseignez au moins le numérateur.', 'error');
+        return;
+    }
+
+    btn.disabled = true;
+    spin.style.display = 'inline-block';
+    btntxt.textContent = '';
+
+    try {
+        const res = await fetch(`/api/kpis/annuel/update/${KPI_ID}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                annee,
+                numerateur:   parseFloat(numEl.value) || 0,
+                denominateur: denEl ? (parseFloat(denEl.value) || 0) : 0,
+                commentaire:  comEl ? comEl.value.trim() : '',
+                direction:    DIRECTION,   /* ← direction auto injectée */
+            })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            document.getElementById(`statut-${annee}`).innerHTML = badgeStatut('en_attente');
+            const valEl = document.getElementById(`val-${annee}`);
+            if (data.valeur !== undefined) {
+                valEl.innerHTML = `<strong>${Number(data.valeur).toFixed(2)}</strong> <span style="color:#888;font-size:.78rem">${UNITE}</span>`;
+            }
+            /* Uploader les preuves liées à cette ligne */
+            if ((fichiersEnAttente[annee] || []).length > 0) {
+                await uploaderFichiersAnnee(annee, data.kpi_annuel_id);
+            }
+            toast(`✅ Année ${annee} enregistrée avec succès.`, 'success');
+            majProgression();
+        } else {
+            toast(`❌ Erreur : ${data.error || 'Inconnue'}`, 'error');
+        }
+    } catch(e) {
+        toast(`❌ Erreur réseau : ${e.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+        spin.style.display = 'none';
+        btntxt.textContent = '💾 Sauver';
+    }
+}
+
+/* ============================================================
+   SOUMETTRE TOUTES LES ANNÉES
+============================================================ */
+async function soumettreToutes() {
+    const btn   = document.getElementById('btnSoumettreT');
+    const icon  = document.getElementById('iconST');
+    const texte = document.getElementById('textST');
+    btn.disabled = true;
+    icon.textContent  = '⏳';
+    texte.textContent = 'Enregistrement en cours…';
+
+    let ok = 0, err = 0;
+    for (const annee of ANNEES) {
+        const numEl = document.getElementById(`inp-num-${KPI_ID}-${annee}`);
+        if (!numEl || numEl.value.trim() === '') continue;
+        try {
+            const denEl = document.getElementById(`inp-den-${KPI_ID}-${annee}`);
+            const comEl = document.getElementById(`com-${KPI_ID}-${annee}`);
+            const res = await fetch(`/api/kpis/annuel/update/${KPI_ID}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    annee,
+                    numerateur:   parseFloat(numEl.value) || 0,
+                    denominateur: denEl ? (parseFloat(denEl.value) || 0) : 0,
+                    commentaire:  comEl ? comEl.value.trim() : '',
+                    direction:    DIRECTION,
+                })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                document.getElementById(`statut-${annee}`).innerHTML = badgeStatut('en_attente');
+                if ((fichiersEnAttente[annee] || []).length > 0) {
+                    await uploaderFichiersAnnee(annee, data.kpi_annuel_id);
+                }
+                ok++;
+            } else { err++; }
+        } catch { err++; }
+    }
+
+    btn.disabled = false;
+    icon.textContent  = err === 0 ? '✅' : '⚠️';
+    texte.textContent = `${ok} année(s) enregistrée(s)${err > 0 ? ` · ${err} erreur(s)` : ''}`;
+    toast(
+        err === 0 ? `✅ ${ok} année(s) enregistrée(s) avec succès.`
+                  : `⚠️ ${ok} enregistrée(s), ${err} erreur(s).`,
+        err === 0 ? 'success' : 'error'
+    );
+    majProgression();
+    chargerHistorique();
+    setTimeout(() => {
+        icon.textContent  = '✅';
+        texte.textContent = 'Enregistrer toutes les années';
+    }, 4000);
+}
+
+/* ============================================================
+   HISTORIQUE
+============================================================ */
+async function chargerHistorique() {
+    try {
+        const res  = await fetch(`/api/kpis/annuel/${KPI_ID}`);
+        const rows = await res.json();
+        if (!Array.isArray(rows) || rows.length === 0) return;
+
+        const renseignes = rows.filter(r => r.valeur !== null && r.valeur !== 0);
+        if (renseignes.length === 0) return;
+
+        document.getElementById('section-historique').style.display = 'block';
+        const tbody = document.getElementById('tbody-historique');
+        tbody.innerHTML = '';
+
+        renseignes.forEach(r => {
+            const preuvesBadge = r.nb_preuves > 0
+                ? `<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:700">📎 ${r.nb_preuves}</span>`
+                : '<span style="color:#ccc;font-size:.75rem">—</span>';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${r.annee}</strong></td>
+                <td><strong style="color:#006633">${Number(r.valeur).toFixed(2)}</strong></td>
+                <td>${UNITE}</td>
+                <td style="color:#555;font-size:.82rem">${r.commentaire || '—'}</td>
+                <td>${preuvesBadge}</td>
+                <td>${badgeStatut('en_attente')}</td>`;
+            tbody.appendChild(tr);
+        });
+
+        const vals = renseignes.map(r => r.valeur).filter(v => v !== null);
+        if (vals.length > 0) {
+            const moy    = vals.reduce((a, b) => a + b, 0) / vals.length;
+            const piedVal = document.getElementById('pied-val');
+            if (piedVal) piedVal.innerHTML =
+                `<strong>${moy.toFixed(2)}</strong> <span style="color:#888;font-size:.78rem">${UNITE}</span>`;
+        }
+    } catch(e) { console.error('historique:', e); }
+}
+
+/* ============================================================
+   TOAST
+============================================================ */
+function toast(msg, type = 'info') {
+    const el = document.getElementById('notifToast');
+    el.textContent = msg;
+    el.className   = `notif-toast ${type} show`;
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    ANNEES.forEach(a => calculerLigne(a));
+});
+</script>
+{% endblock %}
