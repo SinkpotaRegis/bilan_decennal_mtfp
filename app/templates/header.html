@@ -323,6 +323,41 @@
         {% if user_role == 'collecteur' %}
             <a href="{{ url_for('api.collecteur_dashboard') }}" class="nav-link {% if active_page == 'collecteur_dashboard' %}active{% endif %}">Tableau de bord</a>
             <a href="{{ url_for('api.collecteur_recap_soumissions') }}" class="nav-link {% if active_page == 'collecteur_recap_soumissions' %}active{% endif %}">Récap. soumissions</a>
+            <!-- ══ MENU CHOIX DU KPI — dynamique selon direction ══ -->
+            <div class="kpi-dropdown-wrap" id="kpiDropdownWrap">
+
+                <button type="button" class="kpi-trigger-btn" id="kpiTriggerBtn">
+                    📊 Choix du KPI
+                    <i class="fas fa-chevron-down kpi-trigger-chevron" id="kpiTriggerChevron"></i>
+                </button>
+
+                <div class="kpi-panel" id="kpiPanel">
+
+                    <!-- Header du panneau -->
+                    <div class="kpi-panel-header">
+                        <div>
+                            <div class="kpi-panel-header-title">Indicateurs de performance</div>
+                            <div class="kpi-panel-header-sub" id="kpiPanelSub">
+                                {% if user_role == 'admin' %}
+                                    Tous les KPIs — Accès complet
+                                {% else %}
+                                    Filtré selon votre direction affectée
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="kpi-count-badge" id="kpiCountBadge">…</span>
+                    </div>
+
+                    <!-- Corps — rempli par JS -->
+                    <div id="kpiPanelBody">
+                        <div class="kpi-panel-loading">
+                            <span class="kpi-dot-anim"></span>
+                            Chargement des indicateurs…
+                        </div>
+                    </div>
+
+                </div>
+            </div>
         {% elif user_role == 'validateur' %}
             <a href="{{ url_for('api.validateur_dashboard') }}" class="nav-link {% if active_page == 'validateur_dashboard' %}active{% endif %}">Tableau de bord</a>
             <a href="{{ url_for('api.validateur_recap_soumissions') }}" class="nav-link {% if active_page == 'validateur_recap_soumissions' %}active{% endif %}">Récap. soumissions</a>
@@ -333,41 +368,7 @@
             <a href="{{ url_for('api.rapport_codir') }}" class="nav-link {% if active_page == 'rapport_codir' %}active{% endif %}">📋 Rapport CODIR</a>
         {% endif %}
 
-        <!-- ══ MENU CHOIX DU KPI — dynamique selon direction ══ -->
-        <div class="kpi-dropdown-wrap" id="kpiDropdownWrap">
-
-            <button type="button" class="kpi-trigger-btn" id="kpiTriggerBtn">
-                📊 Choix du KPI
-                <i class="fas fa-chevron-down kpi-trigger-chevron" id="kpiTriggerChevron"></i>
-            </button>
-
-            <div class="kpi-panel" id="kpiPanel">
-
-                <!-- Header du panneau -->
-                <div class="kpi-panel-header">
-                    <div>
-                        <div class="kpi-panel-header-title">Indicateurs de performance</div>
-                        <div class="kpi-panel-header-sub" id="kpiPanelSub">
-                            {% if user_role == 'admin' %}
-                                Tous les KPIs — Accès complet
-                            {% else %}
-                                Filtré selon votre direction affectée
-                            {% endif %}
-                        </div>
-                    </div>
-                    <span class="kpi-count-badge" id="kpiCountBadge">…</span>
-                </div>
-
-                <!-- Corps — rempli par JS -->
-                <div id="kpiPanelBody">
-                    <div class="kpi-panel-loading">
-                        <span class="kpi-dot-anim"></span>
-                        Chargement des indicateurs…
-                    </div>
-                </div>
-
-            </div>
-        </div>
+        
         <!-- ══ FIN MENU KPI ══ -->
 
     </div>

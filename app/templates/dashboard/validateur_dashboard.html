@@ -110,22 +110,24 @@
 		opacity: 0.88;
 	}
 
-	.metrics-grid,
-	.queue-grid,
-	.decision-grid {
+	.metrics-grid {
 		display: grid;
 		gap: 18px;
-	}
-
-	.metrics-grid {
-		grid-template-columns: repeat(3, minmax(0, 1fr));
+		grid-template-columns: repeat(5, minmax(0, 1fr));
 	}
 
 	.metric-card {
 		padding: 20px;
 		border-top: 4px solid #1f5f8b;
 		transition: transform 0.25s ease, box-shadow 0.25s ease;
+		text-align: center;
 	}
+
+	.metric-card:nth-child(1) { border-top-color: #1f5f8b; }
+	.metric-card:nth-child(2) { border-top-color: #2b8c4a; }
+	.metric-card:nth-child(3) { border-top-color: #e67700; }
+	.metric-card:nth-child(4) { border-top-color: #c92a2a; }
+	.metric-card:nth-child(5) { border-top-color: #495057; }
 
 	.metric-card:hover,
 	.queue-card:hover,
@@ -137,14 +139,25 @@
 	.metric-value {
 		font-size: 34px;
 		font-weight: 800;
-		color: #173a54;
 		margin: 10px 0 4px;
 	}
+
+	.metric-card:nth-child(1) .metric-value { color: #173a54; }
+	.metric-card:nth-child(2) .metric-value { color: #2b8c4a; }
+	.metric-card:nth-child(3) .metric-value { color: #e67700; }
+	.metric-card:nth-child(4) .metric-value { color: #c92a2a; }
+	.metric-card:nth-child(5) .metric-value { color: #495057; }
 
 	.metric-label {
 		color: #5b6b76;
 		font-size: 13px;
 		line-height: 1.45;
+	}
+
+	.metric-sub {
+		font-size: 11px;
+		color: #8a9b8f;
+		margin-top: 6px;
 	}
 
 	.panel-card {
@@ -190,6 +203,12 @@
 	.btn-validator:hover {
 		transform: translateY(-2px);
 		box-shadow: 0 18px 34px rgba(31, 95, 139, 0.3);
+	}
+
+	.queue-grid,
+	.decision-grid {
+		display: grid;
+		gap: 18px;
 	}
 
 	.queue-grid {
@@ -328,6 +347,12 @@
 		to { opacity: 1; transform: translateY(0); }
 	}
 
+	@media (max-width: 1200px) {
+		.metrics-grid {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+
 	@media (max-width: 1100px) {
 		.hero-grid,
 		.metrics-grid,
@@ -377,7 +402,7 @@
 			</div>
 			<div class="hero-side">
 				<div class="hero-stat">
-					<span class="value">12</span>
+					<span class="value" id="hero-attente">--</span>
 					<span class="label">soumissions en attente de décision</span>
 				</div>
 				<div class="hero-stat">
@@ -398,28 +423,23 @@
 		<div class="metrics-grid">
 			<div class="metric-card">
 				<div class="metric-label">Soumissions reçues</div>
-				<div class="metric-value">12</div>
-				<!-- <div class="metric-label">Soumissions en attente de votre arbitrage.</div> -->
+				<div class="metric-value" id="stat-total">--</div>
 			</div>
 			<div class="metric-card">
 				<div class="metric-label">Soumissions validées</div>
-				<div class="metric-value">05</div>
-				<!-- <div class="metric-label">Données confirmées avec commentaire de validation.</div> -->
+				<div class="metric-value" id="stat-validees">--</div>
 			</div>
 			<div class="metric-card">
 				<div class="metric-label">Soumissions en attente</div>
-				<div class="metric-value">02</div>
-				<!-- <div class="metric-label">Retours demandant une correction ou un complément.</div> -->
+				<div class="metric-value" id="stat-attente">--</div>
 			</div>
 			<div class="metric-card">
 				<div class="metric-label">Soumissions relancées</div>
-				<div class="metric-value">01</div>
-				<!-- <div class="metric-label">Soumissions écartées avec justification tracée.</div> -->
+				<div class="metric-value" id="stat-relancees">--</div>
 			</div>
             <div class="metric-card">
 				<div class="metric-label">Soumissions annulées</div>
-				<div class="metric-value">01</div>
-				<!-- <div class="metric-label">Soumissions écartées avec justification tracée.</div> -->
+				<div class="metric-value" id="stat-annulees">--</div>
 			</div>
 		</div>
 	</section>
@@ -502,4 +522,53 @@
 		</div>
 	</section>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+	async function chargerStatsValidateur() {
+		try {
+			console.log('Chargement des statistiques validateur...');
+
+			const response = await fetch('/api/validateur/stats');
+			const data = await response.json();
+
+			if (data.error) {
+				throw new Error(data.error);
+			}
+
+			// Mise à jour des 5 cartes statistiques
+			document.getElementById('stat-total').textContent = String(data.total || 0).padStart(2, '0');
+			document.getElementById('stat-validees').textContent = String(data.validees || 0).padStart(2, '0');
+			document.getElementById('stat-attente').textContent = String(data.en_attente || 0).padStart(2, '0');
+			document.getElementById('stat-relancees').textContent = String(data.relancees || 0).padStart(2, '0');
+			document.getElementById('stat-annulees').textContent = String(data.annulees || 0).padStart(2, '0');
+			
+			// Mise à jour de la carte hero
+			document.getElementById('hero-attente').textContent = String(data.en_attente || 0);
+
+			console.log(`Stats chargées: Total=${data.total}, Validées=${data.validees}, En attente=${data.en_attente}, Relancées=${data.relancees}, Annulées=${data.annulees}`);
+
+		} catch (error) {
+			console.error('Erreur chargement statistiques validateur:', error);
+			
+			// Afficher une erreur dans les cartes
+			const metrics = document.querySelectorAll('.metric-value');
+			metrics.forEach(metric => {
+				if (metric.textContent === '--') {
+					metric.textContent = 'Erreur';
+					metric.style.color = '#dc2f2f';
+					metric.style.fontSize = '14px';
+				}
+			});
+		}
+	}
+
+	document.addEventListener('DOMContentLoaded', () => {
+		chargerStatsValidateur();
+		
+		// Rafraîchir les stats toutes les 30 secondes
+		setInterval(chargerStatsValidateur, 30000);
+	});
+</script>
 {% endblock %}
