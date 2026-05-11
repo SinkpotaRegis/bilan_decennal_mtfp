@@ -110,22 +110,24 @@
 		opacity: 0.58;
 	}
 
-	.metrics-grid,
-	.shortcuts-grid,
-	.steps-grid {
+	.metrics-grid {
 		display: grid;
 		gap: 18px;
-	}
-
-	.metrics-grid {
-		grid-template-columns: repeat(3, minmax(0, 1fr));
+		grid-template-columns: repeat(5, minmax(0, 1fr));
 	}
 
 	.metric-card {
 		padding: 20px;
 		border-top: 4px solid #2d6a4f;
 		transition: transform 0.25s ease, box-shadow 0.25s ease;
+		text-align: center;
 	}
+
+	.metric-card:nth-child(1) { border-top-color: #2d6a4f; }
+	.metric-card:nth-child(2) { border-top-color: #40916c; }
+	.metric-card:nth-child(3) { border-top-color: #ff8c00; }
+	.metric-card:nth-child(4) { border-top-color: #e67700; }
+	.metric-card:nth-child(5) { border-top-color: #868e96; }
 
 	.metric-card:hover,
 	.shortcut-card:hover,
@@ -137,14 +139,25 @@
 	.metric-value {
 		font-size: 34px;
 		font-weight: 800;
-		color: #1a472a;
 		margin: 10px 0 4px;
 	}
+
+	.metric-card:nth-child(1) .metric-value { color: #1a472a; }
+	.metric-card:nth-child(2) .metric-value { color: #2d6a4f; }
+	.metric-card:nth-child(3) .metric-value { color: #e67700; }
+	.metric-card:nth-child(4) .metric-value { color: #c92a2a; }
+	.metric-card:nth-child(5) .metric-value { color: #495057; }
 
 	.metric-label {
 		color: #5e6f63;
 		font-size: 13px;
 		line-height: 1.45;
+	}
+
+	.metric-sub {
+		font-size: 11px;
+		color: #8a9b8f;
+		margin-top: 6px;
 	}
 
 	.panel-card {
@@ -193,6 +206,8 @@
 	}
 
 	.shortcuts-grid {
+		display: grid;
+		gap: 18px;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
 
@@ -228,6 +243,8 @@
 	}
 
 	.steps-grid {
+		display: grid;
+		gap: 18px;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
 
@@ -261,14 +278,55 @@
 		line-height: 1.55;
 	}
 
+	.taux-wrapper {
+		margin-top: 20px;
+		padding-top: 20px;
+		border-top: 1px solid rgba(0,0,0,0.08);
+		text-align: center;
+	}
+
+	.taux-value {
+		font-size: 28px;
+		font-weight: 800;
+		color: #2d6a4f;
+	}
+
+	.taux-label {
+		font-size: 12px;
+		color: #5e6f63;
+		margin-top: 4px;
+	}
+
+	.alert-banner {
+		margin-top: 20px;
+		padding: 12px 16px;
+		border-radius: 12px;
+		background: #fff3e0;
+		border-left: 4px solid #ff8c00;
+		font-size: 13px;
+		color: #5e3a00;
+		display: none;
+	}
+
+	.alert-banner.show {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+
 	@keyframes fadeInUp {
 		from { opacity: 0; transform: translateY(16px); }
 		to { opacity: 1; transform: translateY(0); }
 	}
 
+	@media (max-width: 1200px) {
+		.metrics-grid {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+
 	@media (max-width: 1100px) {
 		.hero-grid,
-		.metrics-grid,
 		.shortcuts-grid,
 		.steps-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -307,11 +365,6 @@
 					Votre espace collecteur centralise la préparation des KPI, la saisie annuelle et le suivi des envois vers la direction de validation.
 					Utilisez le menu <strong>Choix du KPI</strong> dans la barre de navigation pour ouvrir directement le bon formulaire.
 				</div>
-				<!-- <div class="hero-badges">
-					<span class="hero-badge">📌 Statut par défaut: En attente après soumission</span>
-					<span class="hero-badge">📝 Commentaires conservés à chaque dépôt</span>
-					<span class="hero-badge">🏢 Direction: {{ current_user.structure or 'MTFP' }}</span>
-				</div> -->
 			</div>
 			<div class="hero-side">
 				<div class="hero-stat">
@@ -327,60 +380,49 @@
 	</section>
 
 	<section class="panel-card">
-		<!-- <div class="panel-header">
-			<a class="btn-collecte" href="{{ url_for('api.collecte_avancee') }}">📅 Ouvrir la collecte annuelle</a>
-		</div> -->
 		<div class="metrics-grid">
 			<div class="metric-card">
+				<div class="metric-label">📊 TOTAL</div>
+				<div class="metric-value" id="stat-total">--</div>
 				<div class="metric-label">Soumissions effectuées</div>
-				<div class="metric-value">08</div>
-				<div class="metric-label">Totale</div>
+				<div class="metric-sub">Toutes années confondues</div>
 			</div>
 			<div class="metric-card">
-				<div class="metric-label">Soumissions envoyées</div>
-				<div class="metric-value">21</div>
-				<div class="metric-label">Validée(s)</div>
+				<div class="metric-label">✅ VALIDÉES</div>
+				<div class="metric-value" id="stat-validees">--</div>
+				<div class="metric-label">Soumissions approuvées</div>
+				<div class="metric-sub">Définitivement validées</div>
 			</div>
 			<div class="metric-card">
-				<div class="metric-label">Soumissions envoyées</div>
-				<div class="metric-value">06</div>
-				<div class="metric-label">En attente de validation</div>
+				<div class="metric-label">⏳ EN ATTENTE</div>
+				<div class="metric-value" id="stat-attente">--</div>
+				<div class="metric-label">Soumissions à traiter</div>
+				<div class="metric-sub">En cours de validation</div>
 			</div>
-			<!-- <div class="metric-card">
-				<div class="metric-label">Commentaires reçus</div>
-				<div class="metric-value">04</div>
-				<div class="metric-label"></div>
-			</div> -->
-		</div>
-	</section>
-
-	{#
-	<section class="panel-card">
-		<div class="panel-header">
-			<div>
-				<h2>Raccourcis KPI</h2>
-				<p>Accès direct aux indicateurs les plus utilisés</p>
+			<div class="metric-card">
+				<div class="metric-label">🔄 RELANCÉES</div>
+				<div class="metric-value" id="stat-relancees">--</div>
+				<div class="metric-label">Soumissions à corriger</div>
+				<div class="metric-sub">Modifications demandées</div>
+			</div>
+			<div class="metric-card">
+				<div class="metric-label">❌ ANNULÉES</div>
+				<div class="metric-value" id="stat-annulees">--</div>
+				<div class="metric-label">Soumissions rejetées</div>
+				<div class="metric-sub">Définitivement annulées</div>
 			</div>
 		</div>
-		<div class="shortcuts-grid">
-			<a class="shortcut-card" href="{{ url_for('api.kpi_page', kpi_code='gt3pki06') }}">
-				<div class="shortcut-icon">🏁</div>
-				<h3>GT3PKI06</h3>
-				<p>Délai moyen de proclamation des résultats des concours.</p>
-			</a>
-			<a class="shortcut-card" href="{{ url_for('api.kpi_page', kpi_code='gt3pki11') }}">
-				<div class="shortcut-icon">👥</div>
-				<h3>GT3PKI11</h3>
-				<p>Nombre d'agents recrutés dans l'administration publique.</p>
-			</a>
-			<a class="shortcut-card" href="{{ url_for('api.kpi_page', kpi_code='gt3pki14') }}">
-				<div class="shortcut-icon">🏛️</div>
-				<h3>GT3PKI14</h3>
-				<p>Recrutements par secteur sur la période 2016-2026.</p>
-			</a>
+		
+		<div class="taux-wrapper">
+			<div class="taux-value" id="stat-taux-validation">--%</div>
+			<div class="taux-label">Taux de validation</div>
+		</div>
+		
+		<div class="alert-banner" id="alert-annulees">
+			<span>⚠️</span>
+			<span id="alert-message"></span>
 		</div>
 	</section>
-	#}
 
 	<section class="panel-card">
 		<div class="panel-header">
@@ -408,4 +450,75 @@
 		</div>
 	</section>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+	async function chargerStatsDashboard() {
+		try {
+			console.log('Chargement des statistiques du dashboard...');
+
+			const response = await fetch('/api/collecteur/dashboard-stats');
+			const data = await response.json();
+
+			if (data.error) {
+				throw new Error(data.error);
+			}
+
+			// Mise à jour des valeurs
+			const total = data.total || 0;
+			const validees = data.validees || 0;
+			const enAttente = data.en_attente || 0;
+			const relancees = data.relancees || 0;
+			const annulees = data.annulees || 0;
+
+			document.getElementById('stat-total').textContent = String(total).padStart(2, '0');
+			document.getElementById('stat-validees').textContent = String(validees).padStart(2, '0');
+			document.getElementById('stat-attente').textContent = String(enAttente).padStart(2, '0');
+			document.getElementById('stat-relancees').textContent = String(relancees).padStart(2, '0');
+			document.getElementById('stat-annulees').textContent = String(annulees).padStart(2, '0');
+
+			// Calcul et affichage du taux de validation
+			let tauxValidation = 0;
+			if (total > 0) {
+				tauxValidation = Math.round((validees / total) * 100);
+			}
+			document.getElementById('stat-taux-validation').textContent = `${tauxValidation}%`;
+
+			// Afficher une alerte si des soumissions sont annulées
+			const alertBanner = document.getElementById('alert-annulees');
+			const alertMessage = document.getElementById('alert-message');
+			
+			if (annulees > 0) {
+				alertMessage.textContent = `Vous avez ${annulees} soumission(s) définitivement annulée(s). Veuillez contacter le validateur pour plus d'informations.`;
+				alertBanner.classList.add('show');
+			} else {
+				alertBanner.classList.remove('show');
+			}
+
+			// Log pour debug
+			console.log(`Statistiques chargées: Total=${total}, Validées=${validees}, En attente=${enAttente}, Relancées=${relancees}, Annulées=${annulees}`);
+
+		} catch (error) {
+			console.error('Erreur chargement statistiques:', error);
+			
+			// Afficher un message d'erreur dans l'interface
+			const metrics = document.querySelectorAll('.metric-value');
+			metrics.forEach(metric => {
+				if (metric.textContent === '--') {
+					metric.textContent = 'Erreur';
+					metric.style.color = '#dc2f2f';
+					metric.style.fontSize = '14px';
+				}
+			});
+		}
+	}
+
+	document.addEventListener('DOMContentLoaded', () => {
+		chargerStatsDashboard();
+		
+		// Rafraîchir les stats toutes les 30 secondes
+		setInterval(chargerStatsDashboard, 30000);
+	});
+</script>
 {% endblock %}

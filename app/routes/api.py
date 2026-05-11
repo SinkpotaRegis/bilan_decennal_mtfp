@@ -326,34 +326,34 @@ def _paginate_items(items, page, per_page):
     }
 
 # ============ PAGES HTML ============
-@bp.route('/rapport_codir')
-@login_required
-@log_action('VIEW_PAGE')
-def rapport_codir():
-    return render_template('rapport_codir.html', active_page='rapport_codir')
+# @bp.route('/rapport_codir')
+# @login_required
+# @log_action('VIEW_PAGE')
+# def rapport_codir():
+#     return render_template('rapport_codir.html', active_page='rapport_codir')
 
 
-@bp.route('/')
-@login_required
-@log_action('VIEW_PAGE')
-def dashboard():
-    if current_user.role == 'collecteur':
-        return redirect(url_for('api.collecteur_dashboard'))
-    return render_template('dashboard.html', active_page='dashboard')
+# @bp.route('/')
+# @login_required
+# @log_action('VIEW_PAGE')
+# def dashboard():
+#     if current_user.role == 'collecteur':
+#         return redirect(url_for('api.collecteur_dashboard'))
+#     return render_template('dashboard.html', active_page='dashboard')
 
 
-@bp.route('/collecte_avancee')
-@login_required
-@log_action('VIEW_PAGE')
-def collecte_avancee():
-    return render_template('collecte_avancee.html', active_page='collecte_avancee')
+# @bp.route('/collecte_avancee')
+# @login_required
+# @log_action('VIEW_PAGE')
+# def collecte_avancee():
+#     return render_template('collecte_avancee.html', active_page='collecte_avancee')
 
 
-@bp.route('/graphique')
-@login_required
-@log_action('VIEW_PAGE')
-def graphique():
-    return render_template('graphique.html', active_page='graphique')
+# @bp.route('/graphique')
+# @login_required
+# @log_action('VIEW_PAGE')
+# def graphique():
+#     return render_template('graphique.html', active_page='graphique')
 
 # ============ PAGES KPI ============
 
@@ -2512,4 +2512,145 @@ def api_validateur_recap_action(recap_id):
         })
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+
+#Route pour stats collecteur et validateur
+@bp.route('/api/collecteur/dashboard-stats')
+@login_required
+def dashboard_stats_collecteur():
+    if current_user.role != 'collecteur':
+        return jsonify({'error': 'Non autorisé'}), 403
+
+    try:
+        from sqlalchemy import text
+        
+        result = db.session.execute(text("""
+            WITH dernieres_validations AS (
+                SELECT 
+                    kpi_code,
+                    annee,
+                    statut,
+                    created_at,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY kpi_code, annee 
+                        ORDER BY created_at DESC
+                    ) as rang
+                FROM validations
+            )
+            SELECT
+                COUNT(ka.id) AS total,
+                SUM(CASE WHEN dv.statut = 'valide' THEN 1 ELSE 0 END) AS validees,
+                SUM(CASE 
+                    WHEN dv.statut IS NULL THEN 1 
+                    WHEN dv.statut = 'relance' THEN 1
+                    ELSE 0 
+                END) AS en_attente,
+                SUM(CASE WHEN dv.statut = 'relance' THEN 1 ELSE 0 END) AS relancees,
+                SUM(CASE WHEN dv.statut = 'annule' THEN 1 ELSE 0 END) AS annulees
+            FROM kpis_annuels ka
+            LEFT JOIN kpis k ON k.id = ka.kpi_id
+            LEFT JOIN dernieres_validations dv 
+                ON dv.kpi_code = k.code 
+                AND dv.annee = ka.annee
+                AND dv.rang = 1
+            WHERE ka.created_by = :collecteur_id
+        """), {'collecteur_id': current_user.id}).fetchone()
+
+        return jsonify({
+            'total': result.total or 0,
+            'validees': result.validees or 0,
+            'en_attente': result.en_attente or 0,
+            'relancees': result.relancees or 0,
+            'annulees': result.annulees or 0
+        })
+
+    except Exception as e:
+        print(f"Erreur: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/api/validateur/stats')
+@login_required
+def api_validateur_stats():
+    if current_user.role != 'validateur':
+        return jsonify({'error': 'Non autorisé'}), 403
+
+    try:
+        from sqlalchemy import text
+        
+        # Récupération de la direction du validateur
+        user_dirs = [d.strip().upper() for d in (current_user.structure or '').split(',') if d.strip()]
+        
+        if not user_dirs:
+            return jsonify({
+                'total': 0,
+                'validees': 0,
+                'en_attente': 0,
+                'relancees': 0,
+                'annulees': 0
+            })
+        
+        # Paramètres pour la requête
+        params = {}
+        dir_params = {}
+        dir_placeholders = []
+        
+        for i, d in enumerate(user_dirs):
+            key = f'vdir{i}'
+            dir_params[key] = d
+            dir_placeholders.append(f':{key}')
+        params.update(dir_params)
+        
+        in_clause = ', '.join(dir_placeholders)
+        direction_filter = f"""
+            UPPER(COALESCE(NULLIF(TRIM(ka.direction_concernee), ''), 
+                 NULLIF(TRIM(k.axe_strategique), ''), '')) IN ({in_clause})
+        """
+        
+        # Requête corrigée : on détermine d'abord le dernier statut de chaque soumission
+        result = db.session.execute(text(f"""
+            WITH dernieres_validations AS (
+                SELECT 
+                    kpi_code,
+                    annee,
+                    statut,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY kpi_code, annee 
+                        ORDER BY created_at DESC
+                    ) as rang
+                FROM validations
+            ),
+            soumissions_avec_statut AS (
+                SELECT 
+                    ka.id,
+                    COALESCE(dv.statut, 'en_attente') AS dernier_statut
+                FROM kpis_annuels ka
+                LEFT JOIN kpis k ON k.id = ka.kpi_id
+                LEFT JOIN dernieres_validations dv 
+                    ON dv.kpi_code = k.code 
+                    AND dv.annee = ka.annee
+                    AND dv.rang = 1
+                WHERE {direction_filter}
+            )
+            SELECT
+                COUNT(*) AS total,
+                SUM(CASE WHEN dernier_statut = 'valide' THEN 1 ELSE 0 END) AS validees,
+                SUM(CASE WHEN dernier_statut = 'en_attente' THEN 1 ELSE 0 END) AS en_attente,
+                SUM(CASE WHEN dernier_statut = 'relance' THEN 1 ELSE 0 END) AS relancees,
+                SUM(CASE WHEN dernier_statut = 'annule' THEN 1 ELSE 0 END) AS annulees
+            FROM soumissions_avec_statut
+        """), params).fetchone()
+
+        return jsonify({
+            'total': result.total or 0,
+            'validees': result.validees or 0,
+            'en_attente': result.en_attente or 0,
+            'relancees': result.relancees or 0,
+            'annulees': result.annulees or 0
+        })
+
+    except Exception as e:
+        print(f"Erreur api_validateur_stats: {str(e)}")
         return jsonify({'error': str(e)}), 500
