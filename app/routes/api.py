@@ -333,13 +333,19 @@ def _paginate_items(items, page, per_page):
 #     return render_template('rapport_codir.html', active_page='rapport_codir')
 
 
-# @bp.route('/')
-# @login_required
-# @log_action('VIEW_PAGE')
-# def dashboard():
-#     if current_user.role == 'collecteur':
-#         return redirect(url_for('api.collecteur_dashboard'))
-#     return render_template('dashboard.html', active_page='dashboard')
+@bp.route('/')
+@login_required
+@log_action('VIEW_PAGE')
+def dashboard():
+    if current_user.role == 'collecteur':
+        return redirect(url_for('api.collecteur_dashboard'))
+    elif current_user.role == 'validateur':
+        return redirect(url_for('api.validateur_dashboard'))
+    elif current_user.role == 'admin':
+        return redirect(url_for('api.admin_dashboard'))
+    else:
+        # Rôle inconnu ou non défini
+        return render_template('dashboard.html', active_page='dashboard')
 
 
 # @bp.route('/collecte_avancee')
@@ -349,11 +355,11 @@ def _paginate_items(items, page, per_page):
 #     return render_template('collecte_avancee.html', active_page='collecte_avancee')
 
 
-# @bp.route('/graphique')
-# @login_required
-# @log_action('VIEW_PAGE')
-# def graphique():
-#     return render_template('graphique.html', active_page='graphique')
+@bp.route('/graphique')
+@login_required
+@log_action('VIEW_PAGE')
+def graphique():
+    return render_template('graphique.html', active_page='graphique')
 
 # ============ PAGES KPI ============
 
