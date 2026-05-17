@@ -326,11 +326,11 @@ def _paginate_items(items, page, per_page):
     }
 
 # ============ PAGES HTML ============
-# @bp.route('/rapport_codir')
-# @login_required
-# @log_action('VIEW_PAGE')
-# def rapport_codir():
-#     return render_template('rapport_codir.html', active_page='rapport_codir')
+@bp.route('/rapport_codir')
+@login_required
+@log_action('VIEW_PAGE')
+def rapport_codir():
+    return render_template('rapport_codir.html', active_page='rapport_codir')
 
 
 @bp.route('/')
